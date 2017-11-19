@@ -1,12 +1,12 @@
 $icon-font-path: '../fonts/';
 
+$font-family-sans-serif:  "Yu Gothic", sans-serif;
+
 $state-success-text: #00b300;
 $state-danger-text: #ff0000;
 $link-color: #0000FF;
 
-// bower:scss
-@import "bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss";
-// endbower
+@import "../../bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss";
 
 body {
   padding-top: 10px;
@@ -17,5 +17,5 @@ body {
 }
 
 .input-group-addon {
-  width: 120px;
+  width: 130px;
 }
