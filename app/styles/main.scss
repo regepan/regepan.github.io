@@ -1,11 +1,21 @@
 $icon-font-path: '../fonts/';
 
-$brand-primary:         darken(#428bca, 6.5%) !default; // #337ab7
-$brand-success:         #5cb85c !default;
-$brand-info:            #5bc0de !default;
-$brand-warning:         #f0ad4e !default;
-$brand-danger:          #ff0000;
+$state-success-text: #00b300;
+$state-danger-text: #ff0000;
+$link-color: #0000FF;
 
 // bower:scss
-@import "../../bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss";
+@import "bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss";
 // endbower
+
+body {
+  padding-top: 10px;
+}
+
+.input-group {
+  width: 100%;
+}
+
+.input-group-addon {
+  width: 120px;
+}
