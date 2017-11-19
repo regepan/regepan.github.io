@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="">
+<head>
+<meta charset="utf-8">
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Change wordpress database prefix for security reason</title>
+
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- Place favicon.ico in the root directory -->
+
+<!-- build:css styles/vendor.css -->
+<!-- bower:css -->
+<!-- endbower -->
+<!-- endbuild -->
+
+<!-- build:css styles/main.css -->
+<link rel="stylesheet" href="styles/main.css">
+<!-- endbuild -->
+
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>
+                Change wordpress database prefix for security reason<br>
+                <small>
+                    inspired by
+                    <a href="https://www.sandalot.com/wordpress%E3%81%AE%E3%83%97%E3%83%AC%E3%83%95%E3%82%A3%E3%83%83%E3%82%AF%E3%82%B9%E3%82%92%E5%A4%89%E6%9B%B4%E3%81%99%E3%82%8B%E6%99%82%E3%81%AE%E6%89%8B%E9%A0%86/" target="_blank">
+                        WordPressのプレフィックスを変更する時の手順
+                    </a>
+                </small>
+            </h1>
+        </div>
+        <p>
+            <input type="text" id="current-prefix" class="form-control" placeholder="Current prefix" value="wp_">
+        </p>
+        <p>
+            <input type="text" id="new-prefix" class="form-control" placeholder="New prefix" value="wp_new_">
+        </p>
+        <div class="well">
+            ALTER TABLE <span class="current-prefix text-danger"></span>commentmeta RENAME TO <span class="new-prefix text-success"></span>test_commentmeta;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>comments RENAME TO <span class="new-prefix text-success"></span>test_comments;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>links RENAME TO <span class="new-prefix text-success"></span>test_links;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>options RENAME TO <span class="new-prefix text-success"></span>test_options;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>postmeta RENAME TO <span class="new-prefix text-success"></span>test_postmeta;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>posts RENAME TO <span class="new-prefix text-success"></span>test_posts;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>term_relationships RENAME TO <span class="new-prefix text-success"></span>test_term_relationships;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>term_taxonomy RENAME TO <span class="new-prefix text-success"></span>test_term_taxonomy;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>usermeta RENAME TO <span class="new-prefix text-success"></span>test_usermeta;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>users RENAME TO <span class="new-prefix text-success"></span>test_users;<br>
+            ALTER TABLE <span class="current-prefix text-danger"></span>terms RENAME TO <span class="new-prefix text-success"></span>test_terms;<br>
+        </div>
+
+
+
+    </div>
+
+
+
+<!-- build:js scripts/vendor.js -->
+<!-- bower:js -->
+<script src="/bower_components/jquery/dist/jquery.js"></script>
+<!-- endbower -->
+<!-- endbuild -->
+
+<script>
+    $(function () {
+        var currentPrefix = $('#current-prefix').val();
+        var newPrefix = $('#new-prefix').val();
+        var $currentPrefixPlaceholder = $('.current-prefix');
+        var $newPrefixPlaceholder = $('.new-prefix');
+
+        $.each($currentPrefixPlaceholder, function () {
+            $(this).text(currentPrefix);
+        });
+
+        $.each($newPrefixPlaceholder, function () {
+            $(this).text(newPrefix);
+        });
+    });
+</script>
+</body>
+</html>
