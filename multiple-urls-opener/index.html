@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple URL Opener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+
+<div class="max-w-2xl bg-white shadow-md rounded p-5">
+    <h2 class="text-xl font-bold text-gray-700 mb-4">Multiple URL Opener</h2>
+
+    <!-- URL Textarea Form -->
+    <form id="urlForm">
+            <textarea id="urlInput" class="w-full h-48 p-3 mb-1 border rounded resize focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter each URL on a new line..."></textarea>
+
+        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded">
+            Open URLs
+        </button>
+    </form>
+</div>
+
+<!-- JavaScript to Open URLs -->
+<script>
+    document.getElementById("urlForm").addEventListener("submit", function(event) {
+        event.preventDefault(); // Prevent form submission
+
+        const urls = document.getElementById("urlInput").value.split('\n'); // Get each URL line by line
+        urls.forEach(url => {
+            const trimmedUrl = url.trim(); // Remove any extra spaces
+            if (trimmedUrl) {
+                window.open(trimmedUrl, '_blank'); // Open each URL in a new tab
+            }
+        });
+    });
+</script>
+</body>
+</html>
