@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ブラウザ環境チェッカー - 画面サイズ・UserAgent・WebRTC確認ツール</title>
+    <meta name="description" content="あなたの画面サイズ、UserAgent、ブラウザ情報、WebRTC IPアドレスを即座に確認できる無料ツールです。">
+    <meta name="keywords" content="画面サイズ確認, UserAgent, WebRTC, ブラウザ情報, 環境チェック">
+    <meta property="og:title" content="ブラウザ環境チェッカー - 画面サイズ・UserAgent・WebRTC">
+    <meta property="og:description" content="画面サイズ、UserAgent、WebRTC IPアドレスを即座に確認。">
+    <meta property="og:type" content="website">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-KLDMTKJQ');</script>
+    <!-- End Google Tag Manager -->
+</head>
+<body class="bg-slate-100 min-h-screen">
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KLDMTKJQ"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<div class="max-w-2xl mx-auto px-4 py-10">
+
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-800">💻 ブラウザ環境チェッカー</h1>
+        <p class="text-slate-500 mt-2 text-sm">あなたの画面サイズ・UserAgent・WebRTC情報をまとめて確認</p>
+    </div>
+
+    <!-- Browser / Screen Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-4">
+        <h2 class="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
+            <span>🖥️</span> ブラウザ / 画面情報
+        </h2>
+        <div id="browser-section"></div>
+    </div>
+
+    <!-- WebRTC Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-4">
+        <h2 class="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
+            <span>🔎</span> WebRTC IPアドレス（ローカル）
+        </h2>
+        <div id="webrtc-section">
+            <div class="animate-pulse">
+                <div class="h-4 bg-slate-200 rounded w-1/2"></div>
+            </div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">
+            WebRTCにより検出されたIPアドレスです。VPNを使用していても、ブラウザの設定によってはローカルIPが漏洩することがあります。
+        </p>
+    </div>
+
+    <p class="text-center text-xs text-slate-400 mt-6">
+        <a href="/" class="hover:underline">← ホームに戻る</a>
+    </p>
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function row(label, value) {
+    if (value === null || value === undefined || value === '') return '';
+    return `
+        <div class="flex flex-col sm:flex-row sm:items-start py-2 border-b border-slate-100 last:border-0 gap-0.5 sm:gap-3">
+            <div class="text-xs font-medium text-slate-400 sm:w-36 shrink-0 pt-0.5">${label}</div>
+            <div class="text-sm text-slate-800 break-all">${value}</div>
+        </div>`;
+}
+
+function isPrivateIP(ip) {
+    return /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|169\.254\.|fc|fd|fe80)/i.test(ip);
+}
+
+// ── Browser / Screen Info ──────────────────────────────────────────────────
+
+function renderBrowserSection() {
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const items = [
+        ['スクリーン解像度',      `${screen.width} × ${screen.height} px`],
+        ['ビューポートサイズ',    `${window.innerWidth} × ${window.innerHeight} px`],
+        ['デバイスピクセル比',    `${window.devicePixelRatio}x`],
+        ['カラー深度',            `${screen.colorDepth} bit`],
+        ['ブラウザ言語',          navigator.language],
+        ['タイムゾーン',          Intl.DateTimeFormat().resolvedOptions().timeZone],
+        ['OS / プラットフォーム', navigator.platform || '不明'],
+        ['CPUコア数',             navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} コア` : '不明'],
+        ['デバイスメモリ',        navigator.deviceMemory ? `${navigator.deviceMemory} GB` : '不明'],
+        ['通信種別',              conn ? (conn.effectiveType || conn.type || '不明') : '不明'],
+        ['Cookie',                navigator.cookieEnabled ? '有効' : '無効'],
+        ['User Agent',            `<span class="break-all">${navigator.userAgent}</span>`],
+    ];
+    document.getElementById('browser-section').innerHTML =
+        items.map(([k, v]) => row(k, v)).join('');
+}
+
+// ── WebRTC Local IP ────────────────────────────────────────────────────────
+
+async function detectWebRTCIPs() {
+    const section = document.getElementById('webrtc-section');
+    const ips = new Set();
+
+    function render() {
+        if (ips.size === 0) {
+            section.innerHTML = `<p class="text-sm text-slate-400">WebRTC IPが検出されませんでした（ブラウザでブロック済みの可能性）。</p>`;
+            return;
+        }
+        section.innerHTML = [...ips].map(ip => `
+            <div class="flex items-center gap-2 py-1.5">
+                <span class="w-2 h-2 rounded-full shrink-0 ${isPrivateIP(ip) ? 'bg-blue-400' : 'bg-orange-400'}"></span>
+                <span class="font-mono text-sm text-slate-800">${ip}</span>
+                <span class="text-xs text-slate-400">${isPrivateIP(ip) ? 'プライベート' : 'パブリック'}</span>
+            </div>`).join('');
+    }
+
+    try {
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+            ]
+        });
+        pc.createDataChannel('');
+        await pc.createOffer().then(o => pc.setLocalDescription(o));
+
+        await new Promise(resolve => {
+            const done = () => { clearTimeout(timer); pc.close(); render(); resolve(); };
+            const timer = setTimeout(done, 3000);
+            pc.onicecandidate = e => {
+                if (!e.candidate) { done(); return; }
+                const ipv4 = /(\d{1,3}(?:\.\d{1,3}){3})/g;
+                const ipv6 = /([0-9a-f]{1,4}(?::[0-9a-f]{0,4}){2,})/gi;
+                let m;
+                while ((m = ipv4.exec(e.candidate.candidate)) !== null) ips.add(m[1]);
+                while ((m = ipv6.exec(e.candidate.candidate)) !== null) {
+                    if (m[1].includes(':')) ips.add(m[1]);
+                }
+            };
+        });
+    } catch {
+        section.innerHTML = `<p class="text-sm text-slate-400">WebRTCはこのブラウザでサポートされていません。</p>`;
+    }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+
+renderBrowserSection();
+detectWebRTCIPs();
+</script>
+</body>
+</html>
