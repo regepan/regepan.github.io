@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vw ↔ px 変換ツール - CSS単位コンバーター</title>
+    <meta name="description" content="CSSのvw（ビューポート幅）とpx（ピクセル）を相互変換できる無料ツールです。ビューポート幅を指定してリアルタイムに変換します。">
+    <meta name="keywords" content="vw px 変換, CSS 単位変換, ビューポート, レスポンシブ">
+    <meta property="og:title" content="vw ↔ px 変換ツール">
+    <meta property="og:description" content="CSSのvwとpxをリアルタイム変換。ビューポート幅を指定して正確な値を確認。">
+    <meta property="og:type" content="website">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-KLDMTKJQ');</script>
+    <!-- End Google Tag Manager -->
+</head>
+<body class="bg-slate-100 min-h-screen">
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KLDMTKJQ"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<div class="max-w-2xl mx-auto px-4 py-10">
+
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-800">vw ↔ px 変換ツール</h1>
+        <p class="text-slate-500 mt-2 text-sm">CSSのvwとpxをリアルタイムに相互変換</p>
+    </div>
+
+    <!-- Viewport Width Setting -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-4">
+        <h2 class="text-base font-semibold text-slate-700 mb-4">ビューポート幅の設定</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button onclick="setViewport(375)"  class="preset-btn px-3 py-1.5 rounded-lg text-sm border border-slate-300 hover:bg-slate-50 transition-colors">375px <span class="text-slate-400 text-xs">iPhone</span></button>
+            <button onclick="setViewport(768)"  class="preset-btn px-3 py-1.5 rounded-lg text-sm border border-slate-300 hover:bg-slate-50 transition-colors">768px <span class="text-slate-400 text-xs">iPad</span></button>
+            <button onclick="setViewport(1280)" class="preset-btn px-3 py-1.5 rounded-lg text-sm border border-slate-300 hover:bg-slate-50 transition-colors">1280px <span class="text-slate-400 text-xs">laptop</span></button>
+            <button onclick="setViewport(1440)" class="preset-btn px-3 py-1.5 rounded-lg text-sm border border-slate-300 hover:bg-slate-50 transition-colors">1440px <span class="text-slate-400 text-xs">desktop</span></button>
+            <button onclick="setViewport(window.innerWidth)" class="preset-btn px-3 py-1.5 rounded-lg text-sm border border-slate-300 hover:bg-slate-50 transition-colors">現在のウィンドウ幅</button>
+        </div>
+        <div class="flex items-center gap-3">
+            <input id="viewportInput" type="number" min="1" value="1440"
+                class="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                oninput="onViewportChange()">
+            <span class="text-sm text-slate-500">px</span>
+        </div>
+    </div>
+
+    <!-- Converter -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-4">
+        <h2 class="text-base font-semibold text-slate-700 mb-5">変換</h2>
+
+        <!-- vw → px -->
+        <div class="mb-5">
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">vw → px</label>
+            <div class="flex items-center gap-3">
+                <input id="vwInput" type="number" min="0" step="any" placeholder="例: 10"
+                    class="w-36 px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    oninput="calcVwToPx()">
+                <span class="text-sm text-slate-400">vw</span>
+                <span class="text-slate-300">→</span>
+                <div id="pxResult" class="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 min-h-[42px]">
+                    <span class="text-slate-300">—</span>
+                </div>
+                <span class="text-sm text-slate-400">px</span>
+            </div>
+        </div>
+
+        <!-- px → vw -->
+        <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">px → vw</label>
+            <div class="flex items-center gap-3">
+                <input id="pxInput" type="number" min="0" step="any" placeholder="例: 144"
+                    class="w-36 px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    oninput="calcPxToVw()">
+                <span class="text-sm text-slate-400">px</span>
+                <span class="text-slate-300">→</span>
+                <div id="vwResult" class="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 min-h-[42px]">
+                    <span class="text-slate-300">—</span>
+                </div>
+                <span class="text-sm text-slate-400">vw</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reference Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-4">
+        <h2 class="text-base font-semibold text-slate-700 mb-4">変換表</h2>
+        <p class="text-xs text-slate-400 mb-3">ビューポート幅 <span id="tableViewportLabel" class="font-semibold text-slate-500">1440px</span> での対応値</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-slate-100">
+                        <th class="text-left py-2 pr-4 text-xs font-medium text-slate-400 w-20">vw</th>
+                        <th class="text-left py-2 text-xs font-medium text-slate-400">px</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Formula -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-4">
+        <h2 class="text-base font-semibold text-slate-700 mb-3">計算式</h2>
+        <div class="space-y-2 text-sm text-slate-600 font-mono">
+            <div class="bg-slate-50 rounded-lg px-4 py-2.5">px = vw × ビューポート幅 ÷ 100</div>
+            <div class="bg-slate-50 rounded-lg px-4 py-2.5">vw = px ÷ ビューポート幅 × 100</div>
+        </div>
+    </div>
+
+    <p class="text-center text-xs text-slate-400 mt-6">
+        <a href="/" class="hover:underline">← ホームに戻る</a>
+    </p>
+</div>
+
+<script>
+    const TABLE_VW_VALUES = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 33.333, 40, 50, 60, 66.667, 70, 75, 80, 90, 100];
+
+    function getViewport() {
+        return parseFloat(document.getElementById('viewportInput').value) || 1440;
+    }
+
+    function setViewport(val) {
+        document.getElementById('viewportInput').value = Math.round(val);
+        onViewportChange();
+    }
+
+    function onViewportChange() {
+        calcVwToPx();
+        calcPxToVw();
+        renderTable();
+    }
+
+    function calcVwToPx() {
+        const vw = parseFloat(document.getElementById('vwInput').value);
+        const el = document.getElementById('pxResult');
+        if (isNaN(vw)) {
+            el.innerHTML = '<span class="text-slate-300">—</span>';
+            return;
+        }
+        const px = vw * getViewport() / 100;
+        el.textContent = formatNum(px) + ' px';
+    }
+
+    function calcPxToVw() {
+        const px = parseFloat(document.getElementById('pxInput').value);
+        const el = document.getElementById('vwResult');
+        const vp = getViewport();
+        if (isNaN(px) || vp === 0) {
+            el.innerHTML = '<span class="text-slate-300">—</span>';
+            return;
+        }
+        const vw = px / vp * 100;
+        el.textContent = formatNum(vw) + ' vw';
+    }
+
+    function formatNum(n) {
+        if (Number.isInteger(n)) return n.toString();
+        const s = n.toPrecision(6);
+        return parseFloat(s).toString();
+    }
+
+    function renderTable() {
+        const vp = getViewport();
+        document.getElementById('tableViewportLabel').textContent = Math.round(vp) + 'px';
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = TABLE_VW_VALUES.map(vw => {
+            const px = vw * vp / 100;
+            const label = Number.isInteger(vw) ? vw : vw.toFixed(3).replace(/\.?0+$/, '');
+            return `<tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                <td class="py-1.5 pr-4 text-slate-600">${label} vw</td>
+                <td class="py-1.5 text-slate-800 font-medium">${formatNum(px)} px</td>
+            </tr>`;
+        }).join('');
+    }
+
+    renderTable();
+</script>
+</body>
+</html>
