@@ -118,6 +118,15 @@
         </div>
     </a>
 
+    <a href="./button/" class="card">
+        <div class="preview" id="p4"></div>
+        <div class="body">
+            <div class="title">WebGL Button</div>
+            <div class="desc">シェーダーで描画するボタン 3 種。プラズマ・リップル・パーティクルバーストをホバー／クリックで体験。</div>
+            <span class="tag">Fragment Shader · gl.POINTS</span>
+        </div>
+    </a>
+
     <a href="./shader-art/" class="card">
         <div class="preview" id="p3"></div>
         <div class="body">
@@ -227,9 +236,61 @@ function mini3D(container) {
     requestAnimationFrame(draw);
 }
 
+function miniButton(container) {
+    const c = document.createElement('canvas');
+    container.appendChild(c);
+    const gl = c.getContext('webgl');
+    c.width = container.clientWidth; c.height = container.clientHeight;
+    gl.viewport(0, 0, c.width, c.height);
+    const W = c.width, H = c.height;
+    const vs = `attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
+    const fs = `precision mediump float;uniform float t;uniform vec2 res;
+    void main(){
+        vec2 uv=gl_FragCoord.xy/res;
+        // three mini button shapes
+        float bh = 0.28; float gap = 0.06;
+        float x1=0.08,x2=0.38,x3=0.62, bw=0.26;
+        float y0=0.5-bh*0.5, y1=0.5+bh*0.5;
+        bool in1=(uv.x>x1&&uv.x<x1+bw&&uv.y>y0&&uv.y<y1);
+        bool in2=(uv.x>x2&&uv.x<x2+bw&&uv.y>y0&&uv.y<y1);
+        bool in3=(uv.x>x3&&uv.x<x3+bw&&uv.y>y0&&uv.y<y1);
+        vec3 col=vec3(0.04,0.04,0.10);
+        if(in1){
+            vec2 luv=(uv-vec2(x1,y0))/vec2(bw,bh);
+            float v=sin(luv.x*8.+t)*sin(luv.y*6.+t*.8)+sin((luv.x+luv.y)*7.+t*1.1);
+            v=v*.25+.5;
+            col=vec3(sin(v*6.28+t)*.5+.5,sin(v*6.28+t+2.09)*.5+.5,sin(v*6.28+t+4.19)*.5+.5)*0.8;
+        }
+        if(in2){
+            vec2 luv=(uv-vec2(x2,y0))/vec2(bw,bh);
+            vec3 base=mix(vec3(.04,.04,.18),vec3(.08,.04,.25),luv.x);
+            float age=mod(t,3.0);
+            vec2 d=(luv-vec2(.5,.5))*vec2(1.,H/W*(bw/bh));
+            float w=sin(length(d)*30.-age*8.)*exp(-age*1.8)*exp(-length(d)*4.);
+            col=base+vec3(.4,.7,1.)*w*1.5;
+        }
+        if(in3){
+            vec2 luv=(uv-vec2(x3,y0))/vec2(bw,bh);
+            col=mix(vec3(.08,.03,.03),vec3(.15,.04,.06),luv.x);
+            float pulse=sin(t*2.)*.04;
+            col+=pulse;
+        }
+        gl_FragColor=vec4(col,1.);
+    }`;
+    const mk=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;};
+    const pr=gl.createProgram();gl.attachShader(pr,mk(gl.VERTEX_SHADER,vs));gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);gl.useProgram(pr);
+    const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+    const loc=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+    const tL=gl.getUniformLocation(pr,'t'),rL=gl.getUniformLocation(pr,'res');
+    gl.uniform2f(rL,W,H);
+    function draw(t){gl.uniform1f(tL,t/1000);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(draw);}
+    requestAnimationFrame(draw);
+}
+
 miniParticles(document.getElementById('p1'));
 mini3D(document.getElementById('p2'));
 miniShader(document.getElementById('p3'));
+miniButton(document.getElementById('p4'));
 </script>
 </body>
 </html>

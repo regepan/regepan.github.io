@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebGL Button Demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #080810;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+header {
+    padding: 28px 40px;
+    border-bottom: 1px solid #1a1a2e;
+    flex-shrink: 0;
+}
+header a {
+    color: #555;
+    text-decoration: none;
+    font-size: 13px;
+    font-family: monospace;
+}
+header a:hover { color: #aaa; }
+h1 { margin-top: 12px; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+.subtitle { margin-top: 5px; color: #555; font-size: 13px; }
+
+.stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    padding: 60px 40px;
+}
+
+.btn-wrap {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+.btn-label {
+    font-size: 11px;
+    color: #444;
+    font-family: monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* WebGL canvas sits behind, HTML button sits on top */
+.webgl-btn {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+.webgl-btn canvas {
+    display: block;
+    border-radius: 14px;
+}
+.webgl-btn button {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #fff;
+    text-shadow: 0 1px 8px #0008;
+    transition: color 0.15s;
+    z-index: 2;
+    outline: none;
+}
+
+.info {
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+}
+.info-card {
+    background: #0e0e1a;
+    border: 1px solid #1e1e32;
+    border-radius: 10px;
+    padding: 16px;
+}
+.info-card .name {
+    font-size: 11px;
+    font-family: monospace;
+    color: #5588cc;
+    margin-bottom: 6px;
+}
+.info-card .val {
+    font-size: 13px;
+    color: #aaa;
+    line-height: 1.5;
+}
+</style>
+</head>
+<body>
+<header>
+    <a href="../">← Back</a>
+    <h1>WebGL Button Demo</h1>
+    <p class="subtitle">シェーダーで描画するインタラクティブなボタン 3 種</p>
+</header>
+
+<div class="stage">
+    <div class="info" id="info-grid">
+        <div class="info-card"><div class="name">Plasma</div><div class="val">sin/cos 波を重ねたプラズマ。ホバーで加速。</div></div>
+        <div class="info-card"><div class="name">Ripple</div><div class="val">クリック座標から波紋が広がる。</div></div>
+        <div class="info-card"><div class="name">Particles</div><div class="val">クリックで GPU パーティクルが弾ける。</div></div>
+    </div>
+
+    <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;">
+        <!-- Plasma Button -->
+        <div class="btn-wrap">
+            <span class="btn-label">Plasma</span>
+            <div class="webgl-btn" id="plasma-wrap">
+                <canvas id="plasma" width="200" height="56"></canvas>
+                <button id="plasma-btn">CLICK ME</button>
+            </div>
+        </div>
+
+        <!-- Ripple Button -->
+        <div class="btn-wrap">
+            <span class="btn-label">Ripple</span>
+            <div class="webgl-btn" id="ripple-wrap">
+                <canvas id="ripple" width="200" height="56"></canvas>
+                <button id="ripple-btn">CLICK ME</button>
+            </div>
+        </div>
+
+        <!-- Particle Burst Button -->
+        <div class="btn-wrap">
+            <span class="btn-label">Particles</span>
+            <div class="webgl-btn" id="particle-wrap">
+                <canvas id="particle" width="200" height="56"></canvas>
+                <button id="particle-btn">CLICK ME</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── Utility ────────────────────────────────────────────────
+function mkShader(gl, type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+}
+function mkProgram(gl, vs, fs) {
+    const p = gl.createProgram();
+    gl.attachShader(p, mkShader(gl, gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, mkShader(gl, gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    return p;
+}
+const QUAD_VS = `attribute vec2 a;void main(){gl_Position=vec4(a,0,1);}`;
+function fullscreenQuad(gl) {
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+    return b;
+}
+
+// ─── 1. Plasma Button ───────────────────────────────────────
+(function() {
+    const canvas = document.getElementById('plasma');
+    const gl = canvas.getContext('webgl');
+    const W = canvas.width, H = canvas.height;
+    gl.viewport(0, 0, W, H);
+
+    const fs = `
+    precision mediump float;
+    uniform float t;
+    uniform vec2 res;
+    uniform float hover;
+    void main(){
+        vec2 uv = gl_FragCoord.xy / res;
+        float spd = 1.0 + hover * 2.5;
+        float v = sin(uv.x * 8.0 + t * spd)
+                + sin(uv.y * 6.0 + t * spd * 0.8)
+                + sin((uv.x + uv.y) * 7.0 + t * spd * 1.1)
+                + sin(length(uv - 0.5) * 12.0 - t * spd * 1.3);
+        v = v * 0.25 + 0.5;
+        vec3 col = vec3(
+            sin(v * 6.28 + 0.0) * 0.5 + 0.5,
+            sin(v * 6.28 + 2.09) * 0.5 + 0.5,
+            sin(v * 6.28 + 4.19) * 0.5 + 0.5
+        );
+        // darken edges for border illusion
+        float bx = smoothstep(0.0, 0.06, uv.x) * smoothstep(1.0, 0.94, uv.x);
+        float by = smoothstep(0.0, 0.18, uv.y) * smoothstep(1.0, 0.82, uv.y);
+        col *= 0.55 + 0.45 * bx * by;
+        gl_FragColor = vec4(col, 1.0);
+    }`;
+
+    const prog = mkProgram(gl, QUAD_VS, fs);
+    gl.useProgram(prog);
+    const buf = fullscreenQuad(gl);
+    const aLoc = gl.getAttribLocation(prog, 'a');
+    gl.enableVertexAttribArray(aLoc);
+    gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0);
+    const tLoc = gl.getUniformLocation(prog, 't');
+    const rLoc = gl.getUniformLocation(prog, 'res');
+    const hLoc = gl.getUniformLocation(prog, 'hover');
+    gl.uniform2f(rLoc, W, H);
+
+    let hover = 0, targetHover = 0;
+    const btn = document.getElementById('plasma-btn');
+    btn.addEventListener('mouseenter', () => { targetHover = 1; });
+    btn.addEventListener('mouseleave', () => { targetHover = 0; });
+
+    function draw(ts) {
+        hover += (targetHover - hover) * 0.08;
+        gl.uniform1f(tLoc, ts * 0.001);
+        gl.uniform1f(hLoc, hover);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+})();
+
+// ─── 2. Ripple Button ───────────────────────────────────────
+(function() {
+    const canvas = document.getElementById('ripple');
+    const gl = canvas.getContext('webgl');
+    const W = canvas.width, H = canvas.height;
+    gl.viewport(0, 0, W, H);
+
+    const fs = `
+    precision mediump float;
+    uniform float t;
+    uniform vec2 res;
+    uniform vec2 click;
+    uniform float clickT;
+    uniform float hover;
+    void main(){
+        vec2 uv = gl_FragCoord.xy / res;
+        vec2 asp = vec2(res.x / res.y, 1.0);
+
+        // base gradient
+        vec3 base = mix(vec3(0.04, 0.04, 0.18), vec3(0.08, 0.04, 0.25), uv.x + uv.y * 0.3);
+
+        // subtle idle shimmer
+        float shimmer = sin(uv.x * 14.0 + t * 1.2) * sin(uv.y * 10.0 - t * 0.9) * 0.06;
+        base += vec3(shimmer * 0.4, shimmer * 0.3, shimmer * 0.8);
+
+        // ripple
+        float age = t - clickT;
+        float alive = step(0.0, clickT) * step(age, 2.0);
+        if (alive > 0.5) {
+            vec2 d = (uv - click) * asp;
+            float dist = length(d);
+            float wave = sin(dist * 30.0 - age * 8.0) * exp(-age * 1.8) * exp(-dist * 4.0);
+            vec3 rippleCol = vec3(0.4, 0.7, 1.0) * wave * 1.5;
+            base += rippleCol;
+        }
+
+        // hover glow
+        float glow = hover * 0.06;
+        base += vec3(glow * 0.3, glow * 0.4, glow);
+
+        // border
+        float bx = smoothstep(0.0, 0.06, uv.x) * smoothstep(1.0, 0.94, uv.x);
+        float by = smoothstep(0.0, 0.18, uv.y) * smoothstep(1.0, 0.82, uv.y);
+        float edge = bx * by;
+        // rim light
+        float rim = (1.0 - edge) * 0.3;
+        base += vec3(rim * 0.3, rim * 0.5, rim);
+
+        gl_FragColor = vec4(base, 1.0);
+    }`;
+
+    const prog = mkProgram(gl, QUAD_VS, fs);
+    gl.useProgram(prog);
+    const buf = fullscreenQuad(gl);
+    const aLoc = gl.getAttribLocation(prog, 'a');
+    gl.enableVertexAttribArray(aLoc);
+    gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0);
+    const tLoc = gl.getUniformLocation(prog, 't');
+    const rLoc = gl.getUniformLocation(prog, 'res');
+    const cLoc = gl.getUniformLocation(prog, 'click');
+    const ctLoc = gl.getUniformLocation(prog, 'clickT');
+    const hLoc = gl.getUniformLocation(prog, 'hover');
+    gl.uniform2f(rLoc, W, H);
+    gl.uniform2f(cLoc, 0.5, 0.5);
+    gl.uniform1f(ctLoc, -999);
+
+    let hover = 0, targetHover = 0, startTime = null;
+
+    const btn = document.getElementById('ripple-btn');
+    btn.addEventListener('mouseenter', () => { targetHover = 1; });
+    btn.addEventListener('mouseleave', () => { targetHover = 0; });
+    btn.addEventListener('click', (e) => {
+        const r = canvas.getBoundingClientRect();
+        const x = (e.clientX - r.left) / W;
+        const y = 1.0 - (e.clientY - r.top) / H;
+        gl.uniform2f(cLoc, x, y);
+        if (startTime !== null) gl.uniform1f(ctLoc, (performance.now() - startTime) * 0.001);
+    });
+    canvas.addEventListener('click', (e) => {
+        const r = canvas.getBoundingClientRect();
+        const x = (e.clientX - r.left) / W;
+        const y = 1.0 - (e.clientY - r.top) / H;
+        gl.uniform2f(cLoc, x, y);
+        if (startTime !== null) gl.uniform1f(ctLoc, (performance.now() - startTime) * 0.001);
+    });
+
+    function draw(ts) {
+        if (startTime === null) startTime = ts;
+        const t = (ts - startTime) * 0.001;
+        hover += (targetHover - hover) * 0.08;
+        gl.uniform1f(tLoc, t);
+        gl.uniform1f(hLoc, hover);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+})();
+
+// ─── 3. Particle Burst Button ───────────────────────────────
+(function() {
+    const canvas = document.getElementById('particle');
+    const gl = canvas.getContext('webgl');
+    const W = canvas.width, H = canvas.height;
+    gl.viewport(0, 0, W, H);
+
+    // Background shader
+    const bgFs = `
+    precision mediump float;
+    uniform float t;
+    uniform vec2 res;
+    uniform float hover;
+    void main(){
+        vec2 uv = gl_FragCoord.xy / res;
+        vec3 c = mix(vec3(0.04,0.04,0.08), vec3(0.12,0.04,0.06), uv.x);
+        float h = hover * 0.08;
+        c += vec3(h, h*0.4, h*0.2);
+        float pulse = sin(t * 2.0) * 0.015 * hover;
+        c += pulse;
+        float bx = smoothstep(0.0,0.06,uv.x)*smoothstep(1.0,0.94,uv.x);
+        float by = smoothstep(0.0,0.18,uv.y)*smoothstep(1.0,0.82,uv.y);
+        c *= 0.6 + 0.4*bx*by;
+        float rim = (1.0 - bx*by) * 0.2;
+        c += vec3(rim, rim*0.4, rim*0.2);
+        gl_FragColor = vec4(c, 1.0);
+    }`;
+
+    const bgProg = mkProgram(gl, QUAD_VS, bgFs);
+    const bgBuf = fullscreenQuad(gl);
+    gl.useProgram(bgProg);
+    const bgA = gl.getAttribLocation(bgProg, 'a');
+    gl.enableVertexAttribArray(bgA);
+    gl.vertexAttribPointer(bgA, 2, gl.FLOAT, false, 0, 0);
+    const bgT = gl.getUniformLocation(bgProg, 't');
+    const bgR = gl.getUniformLocation(bgProg, 'res');
+    const bgH = gl.getUniformLocation(bgProg, 'hover');
+    gl.uniform2f(bgR, W, H);
+
+    // Particle shader
+    const ptVs = `
+    attribute float idx;
+    uniform float t;
+    uniform float burst;    // time of last burst
+    uniform vec2  origin;
+    uniform float seed;
+    uniform vec2  res;
+    varying float vAge;
+    varying vec3  vCol;
+    const float PI = 3.14159265;
+    const float N = 120.0;
+    float hash(float n){ return fract(sin(n)*43758.5453); }
+    void main(){
+        float age = t - burst;
+        float dur = 1.4;
+        vAge = 1.0 - clamp(age / dur, 0.0, 1.0);
+
+        float a = hash(idx * 7.3 + seed) * PI * 2.0;
+        float spd = 0.15 + hash(idx * 3.1 + seed + 1.0) * 0.35;
+        float px = origin.x + cos(a) * spd * age * (1.0 - age * 0.6);
+        float py = origin.y + sin(a) * spd * age * (1.0 - age * 0.5) * (res.y / res.x);
+        // aspect correction
+        px = px * 2.0 - 1.0;
+        py = py * 2.0 - 1.0;
+
+        float size = (3.0 + hash(idx * 1.7 + seed) * 4.0) * vAge;
+        gl_Position = vec4(px, py, 0.0, 1.0);
+        gl_PointSize = size;
+
+        float hue = hash(idx * 5.9 + seed);
+        vCol = vec3(
+            sin(hue * 6.28) * 0.5 + 0.5,
+            sin(hue * 6.28 + 2.09) * 0.5 + 0.5,
+            sin(hue * 6.28 + 4.19) * 0.5 + 0.5
+        );
+    }`;
+    const ptFs = `
+    precision mediump float;
+    varying float vAge;
+    varying vec3 vCol;
+    void main(){
+        float d = length(gl_PointCoord - 0.5);
+        if(d > 0.5) discard;
+        float a = (1.0 - d*2.0) * vAge;
+        gl_FragColor = vec4(vCol, a);
+    }`;
+
+    const ptProg = mkProgram(gl, ptVs, ptFs);
+    const N = 120;
+    const indices = new Float32Array(N);
+    for (let i = 0; i < N; i++) indices[i] = i;
+    const ptBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, ptBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+    gl.useProgram(ptProg);
+    const ptIdx = gl.getAttribLocation(ptProg, 'idx');
+    const ptT   = gl.getUniformLocation(ptProg, 't');
+    const ptB   = gl.getUniformLocation(ptProg, 'burst');
+    const ptO   = gl.getUniformLocation(ptProg, 'origin');
+    const ptS   = gl.getUniformLocation(ptProg, 'seed');
+    const ptR   = gl.getUniformLocation(ptProg, 'res');
+    gl.uniform2f(ptR, W, H);
+    gl.uniform1f(ptB, -999);
+    gl.uniform2f(ptO, 0.5, 0.5);
+    gl.uniform1f(ptS, 0);
+
+    let hover = 0, targetHover = 0, startTime = null, burstSeed = 0;
+
+    const btn = document.getElementById('particle-btn');
+    btn.addEventListener('mouseenter', () => { targetHover = 1; });
+    btn.addEventListener('mouseleave', () => { targetHover = 0; });
+
+    function triggerBurst(e) {
+        if (startTime === null) return;
+        const r = canvas.getBoundingClientRect();
+        const x = (e.clientX - r.left) / W;
+        const y = (e.clientY - r.top) / H;
+        const t = (performance.now() - startTime) * 0.001;
+        burstSeed = Math.random() * 100;
+        gl.useProgram(ptProg);
+        gl.uniform1f(ptB, t);
+        gl.uniform2f(ptO, x, y);
+        gl.uniform1f(ptS, burstSeed);
+    }
+    btn.addEventListener('click', triggerBurst);
+    canvas.addEventListener('click', triggerBurst);
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+    function draw(ts) {
+        if (startTime === null) startTime = ts;
+        const t = (ts - startTime) * 0.001;
+        hover += (targetHover - hover) * 0.08;
+
+        gl.disable(gl.BLEND);
+
+        // Draw background
+        gl.useProgram(bgProg);
+        gl.bindBuffer(gl.ARRAY_BUFFER, bgBuf);
+        gl.enableVertexAttribArray(bgA);
+        gl.vertexAttribPointer(bgA, 2, gl.FLOAT, false, 0, 0);
+        gl.uniform1f(bgT, t);
+        gl.uniform1f(bgH, hover);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // Draw particles
+        gl.enable(gl.BLEND);
+        gl.useProgram(ptProg);
+        gl.bindBuffer(gl.ARRAY_BUFFER, ptBuf);
+        gl.enableVertexAttribArray(ptIdx);
+        gl.vertexAttribPointer(ptIdx, 1, gl.FLOAT, false, 0, 0);
+        gl.uniform1f(ptT, t);
+        gl.drawArrays(gl.POINTS, 0, N);
+
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
