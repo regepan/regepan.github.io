@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/particles)",
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/lighting)",
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/shader-art)"
+    ]
+  }
+}

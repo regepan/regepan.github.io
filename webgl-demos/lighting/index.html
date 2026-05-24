@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Phong Lighting - WebGL Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #060610; overflow: hidden; }
+        canvas { display: block; }
+        #ui {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            color: #fff;
+            font-family: monospace;
+        }
+        #ui a { pointer-events: all; color: #555; text-decoration: none; font-size: 13px; }
+        #ui a:hover { color: #aaa; }
+        h2 { font-size: 17px; font-weight: 600; margin-bottom: 5px; }
+        .sub { font-size: 12px; color: #666; line-height: 1.8; }
+        #lights {
+            position: fixed;
+            bottom: 20px;
+            left: 24px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #444;
+            line-height: 1.9;
+            pointer-events: none;
+        }
+        .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        #explain {
+            position: fixed;
+            bottom: 20px;
+            right: 24px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #333;
+            line-height: 1.7;
+            pointer-events: none;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+    <div>
+        <h2>3D Phong Lighting</h2>
+        <div class="sub">頂点シェーダー × フラグメントシェーダー</div>
+        <div class="sub">ドラッグで回転 · 自動回転あり</div>
+    </div>
+    <a href="../">← Back</a>
+</div>
+<div id="lights">
+    <div><span class="dot" style="background:#ff4455"></span>Red Light — XY plane orbit</div>
+    <div><span class="dot" style="background:#44aaff"></span>Blue Light — YZ plane orbit</div>
+    <div><span class="dot" style="background:#44ff88"></span>Green Light — XZ plane orbit</div>
+</div>
+<div id="explain">
+    Phong shading: ambient + diffuse + specular<br>
+    Normal matrix = mat3(model) for pure rotations<br>
+    3 point lights · Blinn-Phong half vector
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+if (!gl) { document.body.innerHTML = '<p style="color:#fff;padding:40px">WebGL not supported</p>'; }
+
+function resize() {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- Matrix math (column-major) ---
+function mul(a, b) {
+    const r = new Float32Array(16);
+    for (let i = 0; i < 4; i++)
+        for (let j = 0; j < 4; j++) {
+            let s = 0;
+            for (let k = 0; k < 4; k++) s += a[i + k*4] * b[k + j*4];
+            r[i + j*4] = s;
+        }
+    return r;
+}
+
+function perspective(fovY, aspect, near, far) {
+    const f = 1.0 / Math.tan(fovY * 0.5);
+    const nf = 1.0 / (near - far);
+    return new Float32Array([
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (far + near) * nf, -1,
+        0, 0, 2 * far * near * nf, 0
+    ]);
+}
+
+function rotateX(a) {
+    const c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]);
+}
+
+function rotateY(a) {
+    const c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]);
+}
+
+function translate(x, y, z) {
+    return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]);
+}
+
+// --- Torus geometry ---
+function createTorus(R, r, majorSeg, minorSeg) {
+    const verts = [], norms = [], idxs = [];
+    for (let i = 0; i <= majorSeg; i++) {
+        const u = i / majorSeg * Math.PI * 2;
+        const cu = Math.cos(u), su = Math.sin(u);
+        for (let j = 0; j <= minorSeg; j++) {
+            const v = j / minorSeg * Math.PI * 2;
+            const cv = Math.cos(v), sv = Math.sin(v);
+            verts.push((R + r*cv)*cu, (R + r*cv)*su, r*sv);
+            norms.push(cv*cu, cv*su, sv);
+        }
+    }
+    for (let i = 0; i < majorSeg; i++) {
+        for (let j = 0; j < minorSeg; j++) {
+            const a = i*(minorSeg+1)+j, b = a+minorSeg+1;
+            idxs.push(a, b, a+1, b, b+1, a+1);
+        }
+    }
+    return {
+        positions: new Float32Array(verts),
+        normals:   new Float32Array(norms),
+        indices:   new Uint16Array(idxs),
+        count:     idxs.length
+    };
+}
+
+const torus = createTorus(0.55, 0.24, 72, 36);
+
+// --- Shaders ---
+const vsSource = `
+attribute vec3 a_position;
+attribute vec3 a_normal;
+uniform mat4 u_model;
+uniform mat4 u_view;
+uniform mat4 u_proj;
+uniform mat3 u_normalMat;
+varying vec3 v_fragPos;
+varying vec3 v_normal;
+void main() {
+    vec4 worldPos = u_model * vec4(a_position, 1.0);
+    v_fragPos = worldPos.xyz;
+    v_normal  = normalize(u_normalMat * a_normal);
+    gl_Position = u_proj * u_view * worldPos;
+}`;
+
+const fsSource = `
+precision mediump float;
+varying vec3 v_fragPos;
+varying vec3 v_normal;
+uniform vec3 u_camPos;
+uniform vec3 u_lightPos[3];
+uniform vec3 u_lightColor[3];
+
+void main() {
+    vec3 N = normalize(v_normal);
+    vec3 V = normalize(u_camPos - v_fragPos);
+
+    // Base material: iridescent silver-blue
+    vec3 baseColor = vec3(0.68, 0.72, 0.88);
+    vec3 result = baseColor * 0.06; // ambient
+
+    for (int i = 0; i < 3; i++) {
+        vec3 L = normalize(u_lightPos[i] - v_fragPos);
+        vec3 H = normalize(L + V); // Blinn-Phong half-vector
+
+        float diff = max(dot(N, L), 0.0);
+        float spec = pow(max(dot(N, H), 0.0), 96.0);
+
+        float d    = length(u_lightPos[i] - v_fragPos);
+        float atten = 1.0 / (0.8 + 0.3 * d + 0.15 * d * d);
+
+        result += u_lightColor[i] * atten * (baseColor * diff * 0.7 + vec3(1.0) * spec * 0.9);
+    }
+
+    // Rim light effect
+    float rim = 1.0 - max(dot(N, V), 0.0);
+    result += vec3(0.1, 0.15, 0.3) * pow(rim, 3.0) * 0.4;
+
+    gl_FragColor = vec4(clamp(result, 0.0, 1.0), 1.0);
+}`;
+
+function makeShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error('Shader error:', gl.getShaderInfoLog(s));
+    }
+    return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, makeShader(gl.VERTEX_SHADER, vsSource));
+gl.attachShader(prog, makeShader(gl.FRAGMENT_SHADER, fsSource));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+// --- Buffers ---
+const posBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+gl.bufferData(gl.ARRAY_BUFFER, torus.positions, gl.STATIC_DRAW);
+const posLoc = gl.getAttribLocation(prog, 'a_position');
+gl.enableVertexAttribArray(posLoc);
+gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
+
+const norBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, norBuf);
+gl.bufferData(gl.ARRAY_BUFFER, torus.normals, gl.STATIC_DRAW);
+const norLoc = gl.getAttribLocation(prog, 'a_normal');
+gl.enableVertexAttribArray(norLoc);
+gl.vertexAttribPointer(norLoc, 3, gl.FLOAT, false, 0, 0);
+
+const idxBuf = gl.createBuffer();
+gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, torus.indices, gl.STATIC_DRAW);
+
+// --- Uniform locations ---
+const uModel    = gl.getUniformLocation(prog, 'u_model');
+const uView     = gl.getUniformLocation(prog, 'u_view');
+const uProj     = gl.getUniformLocation(prog, 'u_proj');
+const uNormalMat= gl.getUniformLocation(prog, 'u_normalMat');
+const uCamPos   = gl.getUniformLocation(prog, 'u_camPos');
+const uLightPos = [0,1,2].map(i => gl.getUniformLocation(prog, `u_lightPos[${i}]`));
+const uLightCol = [0,1,2].map(i => gl.getUniformLocation(prog, `u_lightColor[${i}]`));
+
+// --- Camera & projection ---
+const CAM_POS = [0, 0.6, 3.0];
+const viewMat = translate(0, -0.6, -3.0);
+const projMat = perspective(Math.PI / 5, canvas.width / canvas.height, 0.1, 100);
+
+gl.uniformMatrix4fv(uView, false, viewMat);
+gl.uniform3fv(uCamPos, CAM_POS);
+
+// Light colors
+gl.uniform3fv(uLightCol[0], [1.0, 0.25, 0.30]);
+gl.uniform3fv(uLightCol[1], [0.25, 0.60, 1.00]);
+gl.uniform3fv(uLightCol[2], [0.25, 1.00, 0.50]);
+
+// --- Mouse drag ---
+let rotX = 0.2, rotY = 0;
+let autoRotY = 0;
+let dragging = false, lastMX = 0, lastMY = 0;
+
+canvas.addEventListener('mousedown', e => { dragging = true; lastMX = e.clientX; lastMY = e.clientY; });
+window.addEventListener('mouseup', () => { dragging = false; });
+window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    rotY += (e.clientX - lastMX) * 0.008;
+    rotX += (e.clientY - lastMY) * 0.008;
+    rotX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotX));
+    lastMX = e.clientX; lastMY = e.clientY;
+});
+
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; });
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    rotY += (e.touches[0].clientX - touchStartX) * 0.008;
+    rotX += (e.touches[0].clientY - touchStartY) * 0.008;
+    touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
+}, { passive: false });
+
+// --- Render loop ---
+gl.enable(gl.DEPTH_TEST);
+gl.enable(gl.CULL_FACE);
+gl.clearColor(0.024, 0.024, 0.065, 1.0);
+
+function frame(t) {
+    const ts = t / 1000;
+    autoRotY += 0.004;
+
+    // Recompute projection on resize
+    const aspect = canvas.width / canvas.height;
+    const proj = perspective(Math.PI / 5, aspect, 0.1, 100);
+    gl.uniformMatrix4fv(uProj, false, proj);
+
+    // Model matrix: auto-rotate + mouse drag
+    const model = mul(rotateX(rotX), mul(rotateY(rotY + autoRotY), rotateX(0.3)));
+    gl.uniformMatrix4fv(uModel, false, model);
+
+    // Normal matrix (upper-left 3x3 of model — valid for pure rotations)
+    const nm = new Float32Array([
+        model[0], model[1], model[2],
+        model[4], model[5], model[6],
+        model[8], model[9], model[10]
+    ]);
+    gl.uniformMatrix3fv(uNormalMat, false, nm);
+
+    // Animated light positions
+    const r0 = 2.2, r1 = 1.8, r2 = 2.0;
+    gl.uniform3fv(uLightPos[0], [Math.cos(ts * 0.9) * r0, Math.sin(ts * 0.9) * r0, 0.5]);
+    gl.uniform3fv(uLightPos[1], [0.3, Math.cos(ts * 1.3) * r1, Math.sin(ts * 1.3) * r1]);
+    gl.uniform3fv(uLightPos[2], [Math.cos(ts * 0.6) * r2, 0.3, Math.sin(ts * 0.6) * r2]);
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.drawElements(gl.TRIANGLES, torus.count, gl.UNSIGNED_SHORT, 0);
+
+    requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

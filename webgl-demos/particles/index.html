@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Galaxy - WebGL Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; }
+        canvas { display: block; }
+        #ui {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            color: #fff;
+            font-family: monospace;
+        }
+        #ui a { pointer-events: all; color: #555; text-decoration: none; font-size: 13px; }
+        #ui a:hover { color: #aaa; }
+        h2 { font-size: 17px; font-weight: 600; margin-bottom: 5px; }
+        .sub { font-size: 12px; color: #666; line-height: 1.8; }
+        #fps { color: #4af; margin-top: 2px; }
+        #tip {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: monospace;
+            font-size: 12px;
+            color: #444;
+            pointer-events: none;
+            text-align: center;
+        }
+        #explain {
+            position: fixed;
+            bottom: 20px;
+            right: 24px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #333;
+            line-height: 1.7;
+            pointer-events: none;
+            text-align: right;
+            max-width: 260px;
+        }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+    <div>
+        <h2>Particle Galaxy</h2>
+        <div class="sub">30,000 particles · WebGL GPU rendering</div>
+        <div class="sub">マウスでパーティクルを引き寄せる</div>
+        <div id="fps"></div>
+    </div>
+    <a href="../">← Back</a>
+</div>
+<div id="tip">Move mouse · Touch to attract</div>
+<div id="explain">
+    gl.drawArrays(gl.POINTS, 0, 30000)<br>
+    Additive blending: SRC_ALPHA + ONE<br>
+    HSL color per particle in GLSL
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+if (!gl) { document.body.innerHTML = '<p style="color:#fff;padding:40px">WebGL not supported</p>'; }
+
+function resize() {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- Particle initialization ---
+const N = 30000;
+const pos = new Float32Array(N * 2);
+const vel = new Float32Array(N * 2);
+const hue = new Float32Array(N);
+
+const ARMS = 3;
+for (let i = 0; i < N; i++) {
+    const arm = i % ARMS;
+    const t = (Math.floor(i / ARMS) / (N / ARMS));
+    const angle = t * Math.PI * 14 + arm * (Math.PI * 2 / ARMS) + (Math.random() - 0.5) * 0.6;
+    const r = t * 0.85 + Math.random() * 0.08;
+    pos[i*2]   = Math.cos(angle) * r;
+    pos[i*2+1] = Math.sin(angle) * r * 0.55;
+    const speed = 0.004 / (r + 0.15);
+    vel[i*2]   = -Math.sin(angle) * speed * r;
+    vel[i*2+1] =  Math.cos(angle) * speed * r * 0.55;
+    hue[i] = ((arm / ARMS) + t * 0.25 + Math.random() * 0.08) % 1.0;
+}
+
+// --- Shaders ---
+const vsSource = `
+attribute vec2 a_pos;
+attribute float a_hue;
+varying float v_hue;
+void main() {
+    v_hue = a_hue;
+    gl_Position = vec4(a_pos, 0.0, 1.0);
+    gl_PointSize = 1.8;
+}`;
+
+const fsSource = `
+precision mediump float;
+varying float v_hue;
+
+vec3 hsl2rgb(float h, float s, float l) {
+    float c = (1.0 - abs(2.0 * l - 1.0)) * s;
+    float x = c * (1.0 - abs(mod(h * 6.0, 2.0) - 1.0));
+    float m = l - c * 0.5;
+    vec3 rgb;
+    if      (h < 1.0/6.0) rgb = vec3(c, x, 0.0);
+    else if (h < 2.0/6.0) rgb = vec3(x, c, 0.0);
+    else if (h < 3.0/6.0) rgb = vec3(0.0, c, x);
+    else if (h < 4.0/6.0) rgb = vec3(0.0, x, c);
+    else if (h < 5.0/6.0) rgb = vec3(x, 0.0, c);
+    else                   rgb = vec3(c, 0.0, x);
+    return rgb + m;
+}
+
+void main() {
+    float d = length(gl_PointCoord - vec2(0.5));
+    if (d > 0.5) discard;
+    float alpha = (0.5 - d) * 2.0;
+    vec3 col = hsl2rgb(v_hue, 0.85, 0.65);
+    gl_FragColor = vec4(col, alpha * 0.75);
+}`;
+
+function makeShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error('Shader error:', gl.getShaderInfoLog(s));
+    }
+    return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, makeShader(gl.VERTEX_SHADER, vsSource));
+gl.attachShader(prog, makeShader(gl.FRAGMENT_SHADER, fsSource));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+// --- Buffers ---
+const posBuf = gl.createBuffer();
+const hueBuf = gl.createBuffer();
+
+const posLoc = gl.getAttribLocation(prog, 'a_pos');
+const hueLoc = gl.getAttribLocation(prog, 'a_hue');
+
+gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+gl.bufferData(gl.ARRAY_BUFFER, pos, gl.DYNAMIC_DRAW);
+gl.enableVertexAttribArray(posLoc);
+gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+gl.bindBuffer(gl.ARRAY_BUFFER, hueBuf);
+gl.bufferData(gl.ARRAY_BUFFER, hue, gl.STATIC_DRAW);
+gl.enableVertexAttribArray(hueLoc);
+gl.vertexAttribPointer(hueLoc, 1, gl.FLOAT, false, 0, 0);
+
+// --- Interaction ---
+let mx = 0, my = 0, attracting = false;
+
+function toNDC(cx, cy) {
+    return [(cx / canvas.width) * 2 - 1, -((cy / canvas.height) * 2 - 1)];
+}
+
+canvas.addEventListener('mousemove', e => {
+    [mx, my] = toNDC(e.clientX, e.clientY);
+    attracting = true;
+});
+canvas.addEventListener('mouseleave', () => { attracting = false; });
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    [mx, my] = toNDC(e.touches[0].clientX, e.touches[0].clientY);
+    attracting = true;
+}, { passive: false });
+canvas.addEventListener('touchend', () => { attracting = false; });
+
+// --- Render loop ---
+let prevT = 0, frames = 0, fpsT = 0;
+
+function frame(t) {
+    prevT = t;
+    frames++;
+    if (t - fpsT > 700) {
+        document.getElementById('fps').textContent =
+            Math.round(frames / ((t - fpsT) / 1000)) + ' FPS';
+        frames = 0; fpsT = t;
+    }
+
+    for (let i = 0; i < N; i++) {
+        const px = pos[i*2], py = pos[i*2+1];
+        const dist = Math.sqrt(px*px + py*py) + 0.001;
+
+        // Orbital tangential force
+        vel[i*2]   += (-py / dist) * 0.000035;
+        vel[i*2+1] += ( px / dist) * 0.000035;
+
+        // Gravity toward center
+        vel[i*2]   -= px * 0.000018;
+        vel[i*2+1] -= py * 0.000018;
+
+        // Mouse attraction
+        if (attracting) {
+            const dx = mx - px, dy = my - py;
+            const md2 = dx*dx + dy*dy + 0.002;
+            const f = 0.00012 / md2;
+            vel[i*2]   += dx * f;
+            vel[i*2+1] += dy * f;
+        }
+
+        vel[i*2]   *= 0.994;
+        vel[i*2+1] *= 0.994;
+        pos[i*2]   += vel[i*2];
+        pos[i*2+1] += vel[i*2+1];
+
+        // Soft boundary
+        if (Math.abs(pos[i*2]) > 1.4 || Math.abs(pos[i*2+1]) > 1.4) {
+            pos[i*2]   *= 0.96;
+            pos[i*2+1] *= 0.96;
+            vel[i*2]   *= 0.5;
+            vel[i*2+1] *= 0.5;
+        }
+    }
+
+    // Upload updated positions
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, pos);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+    // Ensure hue buffer attribute is still set
+    gl.bindBuffer(gl.ARRAY_BUFFER, hueBuf);
+    gl.vertexAttribPointer(hueLoc, 1, gl.FLOAT, false, 0, 0);
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.clearColor(0.02, 0.015, 0.06, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.POINTS, 0, N);
+
+    requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
