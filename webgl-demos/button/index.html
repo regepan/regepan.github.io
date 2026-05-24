@@ -550,15 +550,17 @@ function fullscreenQuad(gl) {
         vec3 c2 = vec3(sin(hue+1.20) *0.5+0.5, sin(hue+3.29)*0.5+0.5, sin(hue+5.39)*0.5+0.5);
         vec3 gc  = mix(c1, c2, sin(p.x * 0.5 + t * 0.2) * 0.5 + 0.5);
 
-        vec3  bg    = vec3(0.031, 0.031, 0.063); // match body #080810
-        float fill  = smoothstep( 2.0,  -2.0, dPx);         // interior
-        float bord  = smoothstep( 2.5,   0.0, abs(dPx));    // border line
-        float outer = smoothstep(12.0,   0.0, abs(dPx)) * 0.38; // outer glow
-        float inner = smoothstep( 0.0, -10.0, dPx)      * 0.10; // inner glow
+        vec3 bg      = vec3(0.031, 0.031, 0.063); // matches body #080810
+        vec3 fillCol = vec3(0.06,  0.05,  0.20); // dark indigo — clearly distinct from bg
+
+        float fill  = smoothstep( 2.0,  -2.0, dPx);
+        float bord  = smoothstep( 2.2,   0.0, abs(dPx));
+        float outer = smoothstep(16.0,   0.0, abs(dPx)) * 0.55;
+        float inner = smoothstep( 0.0, -12.0, dPx)      * 0.18;
 
         vec3 col = bg;
-        col  = mix(col, bg + gc * 0.10, fill);
-        col += gc * (bord * 1.2 + outer + inner);
+        col = mix(col, fillCol, fill);
+        col += gc * (bord * 2.0 + outer * 1.3 + inner);
         gl_FragColor = vec4(col, 1.0);
     }`;
 
