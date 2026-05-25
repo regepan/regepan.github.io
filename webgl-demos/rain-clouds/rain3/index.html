@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rain on Glass — WebGL Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #ui {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 20px 24px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: none; color: #fff; font-family: monospace;
+        }
+        #ui a { pointer-events: all; color: #564; text-decoration: none; font-size: 13px; }
+        #ui a:hover { color: #ab9; }
+        h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .sub { font-size: 11px; color: #564; line-height: 1.8; }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+    <div><a href="../">← Rain &amp; Clouds</a></div>
+    <div style="text-align:right">
+        <h2>Rain on Glass</h2>
+        <div class="sub">ガラス面の雨粒 · 屈折レンズ · 水滴が流れる<br>Fragment Shader · SDF Droplets</div>
+    </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+function resize() { canvas.width=window.innerWidth; canvas.height=window.innerHeight; gl.viewport(0,0,canvas.width,canvas.height); }
+resize(); window.addEventListener('resize', resize);
+
+const vs = `attribute vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }`;
+
+const fs = `
+precision highp float;
+uniform float u_t;
+uniform vec2 u_r;
+
+float h1(float n){ return fract(sin(n)*43758.5453); }
+float h2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float h2b(vec2 p){ return fract(sin(dot(p,vec2(269.5,183.3)))*43758.5453); }
+
+// Warm blurry interior background
+vec3 background(vec2 uv){
+    // Warm light blobs — simulates interior seen through frosted glass
+    vec3 col=vec3(0.18,0.12,0.08);
+    float b1=exp(-length(uv-vec2(0.28,0.65))*3.5);
+    float b2=exp(-length(uv-vec2(0.72,0.55))*4.2);
+    float b3=exp(-length(uv-vec2(0.50,0.30))*5.0);
+    float b4=exp(-length(uv-vec2(0.15,0.40))*4.8);
+    float b5=exp(-length(uv-vec2(0.85,0.75))*3.8);
+    col+=b1*vec3(0.95,0.70,0.30)*0.55;
+    col+=b2*vec3(0.70,0.50,0.95)*0.40;
+    col+=b3*vec3(0.40,0.70,0.90)*0.35;
+    col+=b4*vec3(0.90,0.55,0.25)*0.30;
+    col+=b5*vec3(0.60,0.90,0.55)*0.25;
+    // Subtle gradient
+    col=mix(col,col*0.7,uv.y*0.4);
+    return col;
+}
+
+// Droplet SDF: elongated ellipse
+float dropSDF(vec2 p, float r){
+    p.y-=r*0.25;
+    return length(p/vec2(r, r*1.35))-1.0;
+}
+
+// Grid-based static drops
+// Returns: distance to nearest drop center (and outputs center/radius)
+float gridDrop(vec2 uv, float scale, float seed,
+               out vec2 dcenter, out float dradius){
+    float asp=u_r.x/u_r.y;
+    vec2 guv=uv*vec2(scale*asp, scale);
+    vec2 cell=floor(guv);
+    float bestD=1000.0;
+    dcenter=vec2(0.);
+    dradius=0.02;
+    for(int dy=-1;dy<=1;dy++){
+        for(int dx=-1;dx<=1;dx++){
+            vec2 c=cell+vec2(float(dx),float(dy));
+            float exist=h2(c+seed*17.3);
+            if(exist<0.42) continue;
+            float cx=(c.x+0.1+h2(c+seed+1.0)*0.8)/scale/asp;
+            float cy=(c.y+0.1+h2b(c+seed+2.0)*0.8)/scale;
+            float r=(0.06+h2(c+seed+3.0)*0.10)/scale;
+            vec2 p=(uv-vec2(cx,cy));
+            p.x*=asp;
+            float d=dropSDF(p/r,1.0)*r;
+            if(d<bestD){ bestD=d; dcenter=vec2(cx,cy); dradius=r; }
+        }
+    }
+    return bestD;
+}
+
+void main(){
+    vec2 uv=gl_FragCoord.xy/u_r;
+    float asp=u_r.x/u_r.y;
+
+    // Glass background (slightly tinted + blurred background)
+    vec3 col=background(uv);
+    col=mix(col,vec3(0.55,0.62,0.75),0.18); // glass blue tint
+
+    // --- Static drops on glass ---
+    vec2 dc; float dr;
+
+    // Layer 1: large drops
+    float d1=gridDrop(uv,3.0,0.0,dc,dr);
+    if(d1<0.0){
+        vec2 p=(uv-dc); p.x*=asp;
+        vec2 refUV=uv+normalize(p/dr)*(-d1/dr)*0.55;
+        refUV=clamp(refUV,0.,1.);
+        vec3 refracted=background(refUV)*1.35;
+        float edge=smoothstep(-0.006,0.,d1);
+        col=mix(col,refracted,smoothstep(0.,-0.008,d1));
+        col=mix(col,vec3(0.88,0.93,1.0),edge*0.45);
+    }
+
+    // Layer 2: medium drops
+    float d2=gridDrop(uv,5.5,1.0,dc,dr);
+    if(d2<0.0){
+        vec2 p=(uv-dc); p.x*=asp;
+        vec2 refUV=uv+normalize(p/dr)*(-d2/dr)*0.50;
+        refUV=clamp(refUV,0.,1.);
+        vec3 refracted=background(refUV)*1.25;
+        float edge=smoothstep(-0.005,0.,d2);
+        col=mix(col,refracted,smoothstep(0.,-0.007,d2));
+        col=mix(col,vec3(0.88,0.93,1.0),edge*0.40);
+    }
+
+    // Layer 3: small drops
+    float d3=gridDrop(uv,9.0,2.0,dc,dr);
+    if(d3<0.0){
+        vec2 p=(uv-dc); p.x*=asp;
+        vec2 refUV=uv+normalize(p/dr)*(-d3/dr)*0.45;
+        refUV=clamp(refUV,0.,1.);
+        vec3 refracted=background(refUV)*1.20;
+        float edge=smoothstep(-0.004,0.,d3);
+        col=mix(col,refracted,smoothstep(0.,-0.005,d3));
+        col=mix(col,vec3(0.88,0.93,1.0),edge*0.35);
+    }
+
+    // --- Sliding drops (animated) ---
+    for(int i=0;i<9;i++){
+        float fi=float(i);
+        float xPos=h1(fi*0.43+5.1);
+        float spd=0.06+h1(fi*0.31+7.3)*0.16;
+        float startPhase=h1(fi*0.27+9.1);
+        float yPos=1.0-fract(u_t*spd+startPhase);
+        float r=0.022+h1(fi*0.19+4.2)*0.016;
+
+        vec2 center=vec2(xPos,yPos);
+        vec2 p=(uv-center); p.x*=asp;
+        float d=dropSDF(p/r,1.0)*r;
+
+        // Trailing wet streak
+        float trailW=r*0.55;
+        float trailAbove=step(uv.y,yPos+r*1.3);
+        float trailBelow=step(yPos-0.20,uv.y);
+        float trailX=smoothstep(trailW,0.,abs((uv.x-xPos)*asp));
+        float trail=trailX*trailAbove*trailBelow*0.35;
+        col=mix(col,col*0.88+vec3(0.60,0.72,0.90)*0.12,trail);
+
+        if(d<0.0){
+            vec2 refUV=uv+normalize(p/r)*(-d/r)*0.58;
+            refUV=clamp(refUV,0.,1.);
+            vec3 refracted=background(refUV)*1.40;
+            float edge=smoothstep(-0.006,0.,d);
+            col=mix(col,refracted,smoothstep(0.,-0.008,d));
+            col=mix(col,vec3(0.90,0.95,1.0),edge*0.50);
+        }
+    }
+
+    // Water streak from rain hits at top
+    float topRain=fract(uv.x*23.0+sin(uv.x*7.3)*0.8)*2.0-1.0;
+    float streak=smoothstep(0.015,0.,abs(topRain*0.03))*smoothstep(1.0,0.85,uv.y)*0.15;
+    col=mix(col,vec3(0.75,0.82,0.95),streak);
+
+    // Glass reflection highlight at top
+    float topHighlight=smoothstep(0.92,1.0,uv.y)*0.12;
+    col+=topHighlight*vec3(0.90,0.93,1.0);
+
+    gl_FragColor=vec4(col,1.0);
+}`;
+
+function mk(t,s){ const sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(sh)); return sh; }
+const prog=gl.createProgram();
+gl.attachShader(prog,mk(gl.VERTEX_SHADER,vs));
+gl.attachShader(prog,mk(gl.FRAGMENT_SHADER,fs));
+gl.linkProgram(prog); gl.useProgram(prog);
+const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const aloc=gl.getAttribLocation(prog,'a');
+gl.enableVertexAttribArray(aloc); gl.vertexAttribPointer(aloc,2,gl.FLOAT,false,0,0);
+const uT=gl.getUniformLocation(prog,'u_t'), uR=gl.getUniformLocation(prog,'u_r');
+function draw(t){ gl.uniform1f(uT,t/1000); gl.uniform2f(uR,canvas.width,canvas.height); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(draw); }
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

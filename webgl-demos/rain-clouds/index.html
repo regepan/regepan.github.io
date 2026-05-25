@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rain &amp; Clouds — WebGL Demos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #080810;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+        }
+        header { padding: 32px 40px; border-bottom: 1px solid #1a1a2e; }
+        header a { color: #555; text-decoration: none; font-size: 13px; font-family: monospace; }
+        header a:hover { color: #aaa; }
+        h1 { margin-top: 14px; font-size: 30px; font-weight: 700; letter-spacing: -0.5px; }
+        .subtitle { margin-top: 6px; color: #555; font-size: 14px; }
+        .section-title {
+            padding: 28px 40px 0;
+            font-size: 11px;
+            font-family: monospace;
+            color: #444;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px 40px 40px;
+            max-width: 1100px;
+        }
+        .card {
+            background: #0e0e1a; border: 1px solid #1e1e32; border-radius: 12px;
+            overflow: hidden; text-decoration: none; color: inherit; display: block;
+            transition: border-color .2s, transform .2s, box-shadow .2s;
+        }
+        .card:hover { border-color: #3a3a60; transform: translateY(-3px); box-shadow: 0 8px 32px #0008; }
+        .preview { height: 160px; position: relative; overflow: hidden; }
+        .preview canvas { width: 100%; height: 100%; }
+        .body { padding: 20px; border-top: 1px solid #1a1a2e; }
+        .title { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+        .desc { font-size: 13px; color: #666; line-height: 1.65; }
+        .tag {
+            display: inline-block; margin-top: 14px; padding: 3px 10px;
+            background: #12122a; border: 1px solid #2a2a50; border-radius: 20px;
+            font-size: 11px; color: #5588cc; font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <a href="../">← WebGL Demos</a>
+    <h1>Rain &amp; Clouds</h1>
+    <p class="subtitle">雨と雲を WebGL シェーダーで表現する 6 つのデモ</p>
+</header>
+
+<div class="section-title">— Rain —</div>
+<div class="grid">
+    <a href="./rain1/" class="card">
+        <div class="preview" id="p1"></div>
+        <div class="body">
+            <div class="title">Heavy Rain</div>
+            <div class="desc">夜の都市シルエットに降り注ぐ大雨。雷のフラッシュと稲妻、地面の水溜まりに揺れる反射。3 層のハッシュ雨粒で奥行きを表現。</div>
+            <span class="tag">hash rain · lightning · reflection</span>
+        </div>
+    </a>
+    <a href="./rain2/" class="card">
+        <div class="preview" id="p2"></div>
+        <div class="body">
+            <div class="title">Neon Rain</div>
+            <div class="desc">サイバーパンクの都市を彩るネオンカラーの雨。シアン・マゼンタ・グリーンの光が濡れた地面に反射し、ネオン管が建物の輪郭を縁取る。</div>
+            <span class="tag">neon · wet floor · procedural city</span>
+        </div>
+    </a>
+    <a href="./rain3/" class="card">
+        <div class="preview" id="p3"></div>
+        <div class="body">
+            <div class="title">Rain on Glass</div>
+            <div class="desc">ガラス窓の内側から見た雨。雨粒は SDF で描かれた凸レンズとして背景を屈折させる。大粒の雫がゆっくり流れ落ち、細い水跡を残す。</div>
+            <span class="tag">SDF · refraction · sliding drops</span>
+        </div>
+    </a>
+</div>
+
+<div class="section-title">— Clouds —</div>
+<div class="grid">
+    <a href="./cloud1/" class="card">
+        <div class="preview" id="p4"></div>
+        <div class="body">
+            <div class="title">Fluffy Clouds</div>
+            <div class="desc">夏の青空に浮かぶ積雲。6 オクターブの fBm ノイズと Domain Warping で綿菓子のような雲を生成。太陽と地平線のヘイズも描画。</div>
+            <span class="tag">fBm · domain warping · 6 octaves</span>
+        </div>
+    </a>
+    <a href="./cloud2/" class="card">
+        <div class="preview" id="p5"></div>
+        <div class="body">
+            <div class="title">Storm Clouds</div>
+            <div class="desc">2 重の Domain Warping で生成した荒々しい積乱雲。枝分かれする稲妻が定期的に走り、フラッシュが雲の内部を照らし出す。</div>
+            <span class="tag">turbulent fBm · branching lightning · flash</span>
+        </div>
+    </a>
+    <a href="./cloud3/" class="card">
+        <div class="preview" id="p6"></div>
+        <div class="body">
+            <div class="title">Sunset Volumetric Clouds</div>
+            <div class="desc">レイマーチングで体積を持つ夕焼け雲。太陽光の透過率を積分し、橙・紫・藍のグラデーションが雲の奥行きを生み出す。</div>
+            <span class="tag">raymarching · transmittance · 3D noise</span>
+        </div>
+    </a>
+</div>
+
+<script>
+// ── Mini preview shaders ──────────────────────────────────────────────────
+
+function setupGL(container) {
+    const c = document.createElement('canvas');
+    container.appendChild(c);
+    c.width = container.clientWidth;
+    c.height = container.clientHeight;
+    const gl = c.getContext('webgl');
+    gl.viewport(0, 0, c.width, c.height);
+    return { gl, c };
+}
+
+function mkProg(gl, fs) {
+    const vs = `attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}`;
+    const mk = (t,s)=>{ const sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh); return sh; };
+    const p = gl.createProgram();
+    gl.attachShader(p, mk(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p); gl.useProgram(p);
+    const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+    const al=gl.getAttribLocation(p,'a'); gl.enableVertexAttribArray(al); gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+    return p;
+}
+
+// ── p1: Heavy Rain mini ──
+(function(){
+    const {gl,c}=setupGL(document.getElementById('p1'));
+    const fs=`precision highp float;uniform float t;uniform vec2 r;
+float h2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float rain(vec2 uv,float xs,float ys,float spd){
+    vec2 rv=uv*vec2(xs,ys); vec2 cell=floor(rv),loc=fract(rv);
+    float hv=h2(cell); float xp=0.1+hv*0.8; float yp=fract(t*spd+h2(cell+5.3));
+    float dx=abs(loc.x-xp); float dy=loc.y-(1.-yp);
+    return smoothstep(0.018,0.,dx)*smoothstep(0.22,0.,max(dy,0.))*step(0.,dy)*(0.4+0.6*hv);
+}
+void main(){
+    vec2 uv=gl_FragCoord.xy/r;
+    vec3 col=mix(vec3(0.005,0.005,0.025),vec3(0.04,0.06,0.12),uv.y);
+    float h1v=h2(vec2(floor(uv.x*16.),0.))*0.22+0.08;
+    float ib=step(0.22,uv.y)*step(uv.y,0.22+h1v);
+    if(ib>0.5) col=vec3(0.012,0.012,0.020);
+    if(uv.y<0.22) col=vec3(0.010,0.013,0.020);
+    float rv=rain(uv,80.,28.,1.2)+rain(uv,50.,18.,0.9)*0.6;
+    col+=clamp(rv,0.,1.)*vec3(0.45,0.58,0.88)*(ib>0.5?0.2:1.0);
+    gl_FragColor=vec4(col,1.);
+}`;
+    const p=mkProg(gl,fs);
+    const uT=gl.getUniformLocation(p,'t'),uR=gl.getUniformLocation(p,'r');
+    gl.uniform2f(uR,c.width,c.height);
+    (function loop(ts){ gl.uniform1f(uT,ts/1000); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(loop); })(0);
+})();
+
+// ── p2: Neon Rain mini ──
+(function(){
+    const {gl,c}=setupGL(document.getElementById('p2'));
+    const fs=`precision highp float;uniform float t;uniform vec2 r;
+float h2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float h1(float n){return fract(sin(n)*43758.5453);}
+vec3 nc(float i){float c=fract(i*0.37);if(c<0.25)return vec3(0.,1.,1.);if(c<0.5)return vec3(1.,0.,0.9);if(c<0.75)return vec3(0.2,1.,0.3);return vec3(1.,0.5,0.);}
+float rain(vec2 uv,float xs,float ys,float spd){
+    vec2 rv=uv*vec2(xs,ys); vec2 cell=floor(rv),loc=fract(rv);
+    float hv=h2(cell); float xp=0.1+hv*0.8; float yp=fract(t*spd+h2(cell+7.));
+    float dx=abs(loc.x-xp); float dy=loc.y-(1.-yp);
+    return smoothstep(0.016,0.,dx)*smoothstep(0.22,0.,max(dy,0.))*step(0.,dy)*(0.35+0.65*hv);
+}
+void main(){
+    vec2 uv=gl_FragCoord.xy/r;
+    vec3 col=mix(vec3(0.010,0.004,0.022),vec3(0.020,0.008,0.045),uv.y);
+    float bw=1./14.; float idx=floor(uv.x/bw);
+    float bldH=h1(idx*0.53+3.1)*0.30+0.08;
+    float ib=step(0.12,uv.y)*step(uv.y,0.12+bldH);
+    if(ib>0.5){ col=vec3(0.005,0.003,0.010); float xe=fract(uv.x/bw)*bw; col+=nc(idx)*smoothstep(0.004,0.,min(xe,bw-xe))*1.5; }
+    if(uv.y<0.12) col=vec3(0.004,0.002,0.008);
+    float rv=rain(uv,75.,28.,1.2)+rain(uv,48.,18.,0.95)*0.6+rain(uv,30.,12.,0.7)*0.4;
+    vec3 rc=nc(floor(uv.x*14.));
+    col+=clamp(rv,0.,1.)*rc*(ib>0.5?0.12:0.80);
+    gl_FragColor=vec4(col,1.);
+}`;
+    const p=mkProg(gl,fs);
+    const uT=gl.getUniformLocation(p,'t'),uR=gl.getUniformLocation(p,'r');
+    gl.uniform2f(uR,c.width,c.height);
+    (function loop(ts){ gl.uniform1f(uT,ts/1000); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(loop); })(0);
+})();
+
+// ── p3: Rain on Glass mini ──
+(function(){
+    const {gl,c}=setupGL(document.getElementById('p3'));
+    const fs=`precision highp float;uniform float t;uniform vec2 r;
+float h1(float n){return fract(sin(n)*43758.5453);}
+float h2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+vec3 bg(vec2 uv){
+    vec3 col=vec3(0.15,0.10,0.06);
+    col+=exp(-length(uv-vec2(0.3,0.65))*3.5)*vec3(0.9,0.65,0.25)*0.5;
+    col+=exp(-length(uv-vec2(0.7,0.5))*4.5)*vec3(0.6,0.45,0.85)*0.4;
+    return col;
+}
+void main(){
+    vec2 uv=gl_FragCoord.xy/r;
+    float asp=r.x/r.y;
+    vec3 col=mix(bg(uv),vec3(0.5,0.58,0.72),0.20);
+    // Grid drops
+    float scale=4.5;
+    vec2 guv=uv*vec2(scale*asp,scale); vec2 cell=floor(guv); vec2 loc=fract(guv);
+    for(int dy=-1;dy<=1;dy++){ for(int dx=-1;dx<=1;dx++){
+        vec2 cc=cell+vec2(float(dx),float(dy));
+        if(h2(cc)<0.40) continue;
+        float cx=(cc.x+0.1+h2(cc+1.)*0.8)/scale/asp;
+        float cy=(cc.y+0.1+h2(cc+2.)*0.8)/scale;
+        float dr=(0.07+h2(cc+3.)*0.09)/scale;
+        vec2 pp=(uv-vec2(cx,cy)); pp.x*=asp;
+        pp.y-=dr*0.25;
+        float d=length(pp/vec2(dr,dr*1.35))-1.0;
+        if(d<0.){ vec2 refUV=uv+normalize(pp/dr)*(-d/dr)*0.5; refUV=clamp(refUV,0.,1.); col=mix(col,bg(refUV)*1.3,smoothstep(0.,-0.008,d)); col=mix(col,vec3(0.88,0.93,1.),smoothstep(-0.006,0.,d)*0.4); }
+    }}
+    // Sliding drops
+    for(int i=0;i<5;i++){
+        float fi=float(i); float xp=h1(fi*0.43+5.); float dr=0.025+h1(fi*0.19+4.)*0.015;
+        float yp=1.-fract(t*(0.06+h1(fi*0.31+7.)*0.14)+h1(fi*0.27+9.));
+        vec2 pp=(uv-vec2(xp,yp)); pp.x*=asp; pp.y-=dr*0.25;
+        float d=length(pp/vec2(dr,dr*1.35))-1.0;
+        if(d<0.){ vec2 refUV=uv+normalize(pp/dr)*(-d/dr)*0.55; refUV=clamp(refUV,0.,1.); col=mix(col,bg(refUV)*1.35,smoothstep(0.,-0.008,d)); col=mix(col,vec3(0.9,0.95,1.),smoothstep(-0.006,0.,d)*0.5); }
+    }
+    gl_FragColor=vec4(col,1.);
+}`;
+    const p=mkProg(gl,fs);
+    const uT=gl.getUniformLocation(p,'t'),uR=gl.getUniformLocation(p,'r');
+    gl.uniform2f(uR,c.width,c.height);
+    (function loop(ts){ gl.uniform1f(uT,ts/1000); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(loop); })(0);
+})();
+
+// ── p4: Fluffy Clouds mini ──
+(function(){
+    const {gl,c}=setupGL(document.getElementById('p4'));
+    const fs=`precision highp float;uniform float t;uniform vec2 r;
+vec2 h2(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return -1.+2.*fract(sin(p)*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);return mix(mix(dot(h2(i),f),dot(h2(i+vec2(1,0)),f-vec2(1,0)),u.x),mix(dot(h2(i+vec2(0,1)),f-vec2(0,1)),dot(h2(i+vec2(1,1)),f-vec2(1,1)),u.x),u.y);}
+float fbm(vec2 p){float v=0.,a=0.5;mat2 rot=mat2(0.8,-0.6,0.6,0.8);for(int i=0;i<5;i++){v+=a*noise(p);p=rot*p*2.1+vec2(100.);a*=0.5;}return v;}
+void main(){
+    vec2 uv=gl_FragCoord.xy/r; float asp=r.x/r.y;
+    vec2 uvA=vec2(uv.x*asp,uv.y);
+    vec3 sky=uv.y>0.5?mix(mix(vec3(0.42,0.68,0.95),vec3(0.10,0.38,0.82),(uv.y-0.5)*2.),vec3(0.10,0.38,0.82),0.):mix(vec3(0.72,0.86,0.98),vec3(0.42,0.68,0.95),uv.y*2.);
+    sky=mix(sky,vec3(0.75,0.88,0.98),smoothstep(0.28,0.,uv.y)*0.4);
+    vec2 p=uvA*vec2(3.5,2.0)+vec2(t*0.04,0.);
+    float w=fbm(p*0.7+vec2(t*0.015,1.5))*0.35;
+    float cl=smoothstep(0.0,0.7,fbm(p+w));
+    float sh=fbm(p*1.8+vec2(t*0.04+1.,1.))*0.5+0.55;
+    vec3 col=mix(sky,mix(vec3(0.68,0.72,0.82),vec3(1.,1.,.98),sh),cl);
+    gl_FragColor=vec4(col,1.);
+}`;
+    const p=mkProg(gl,fs);
+    const uT=gl.getUniformLocation(p,'t'),uR=gl.getUniformLocation(p,'r');
+    gl.uniform2f(uR,c.width,c.height);
+    (function loop(ts){ gl.uniform1f(uT,ts/1000); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(loop); })(0);
+})();
+
+// ── p5: Storm Clouds mini ──
+(function(){
+    const {gl,c}=setupGL(document.getElementById('p5'));
+    const fs=`precision highp float;uniform float t;uniform vec2 r;
+vec2 h2(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return -1.+2.*fract(sin(p)*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);return mix(mix(dot(h2(i),f),dot(h2(i+vec2(1,0)),f-vec2(1,0)),u.x),mix(dot(h2(i+vec2(0,1)),f-vec2(0,1)),dot(h2(i+vec2(1,1)),f-vec2(1,1)),u.x),u.y);}
+float fbm(vec2 p){float v=0.,a=0.5;mat2 rot=mat2(0.72,-0.69,0.69,0.72);for(int i=0;i<6;i++){v+=a*noise(p);p=rot*p*2.15+vec2(100.);a*=0.52;}return v;}
+void main(){
+    vec2 uv=gl_FragCoord.xy/r; float asp=r.x/r.y;
+    vec2 uvA=vec2(uv.x*asp,uv.y);
+    float lt=mod(t*0.5,10.); float flash=lt<0.15?smoothstep(0.15,0.,lt)*0.8:0.;
+    vec3 col=mix(vec3(0.015,0.016,0.024),vec3(0.030,0.032,0.050),uv.y);
+    col+=flash*vec3(0.4,0.45,0.7)*(0.5+0.5*uv.y);
+    vec2 q=uvA*vec2(2.2,1.6)+vec2(t*0.038,0.);
+    float w=fbm(q*0.6+vec2(t*0.012,0.7))*0.35;
+    float sc=smoothstep(0.,0.7,fbm(q+w));
+    float li=fbm(q*1.5+vec2(t*0.04+1.,1.))*0.5+0.3;
+    vec3 cc=mix(vec3(0.055,0.06,0.085),mix(vec3(0.10,0.11,0.15),vec3(0.20,0.22,0.28),0.5),li);
+    cc+=flash*vec3(0.5,0.55,0.8)*0.7;
+    col=mix(col,cc,sc);
+    if(uv.y<0.14) col=vec3(0.006,0.007,0.010)+flash*vec3(0.04,0.05,0.08);
+    gl_FragColor=vec4(col,1.);
+}`;
+    const p=mkProg(gl,fs);
+    const uT=gl.getUniformLocation(p,'t'),uR=gl.getUniformLocation(p,'r');
+    gl.uniform2f(uR,c.width,c.height);
+    (function loop(ts){ gl.uniform1f(uT,ts/1000); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(loop); })(0);
+})();
+
+// ── p6: Sunset Clouds mini ──
+(function(){
+    const {gl,c}=setupGL(document.getElementById('p6'));
+    const fs=`precision highp float;uniform float t;uniform vec2 r;
+vec2 h2(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return -1.+2.*fract(sin(p)*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);return mix(mix(dot(h2(i),f),dot(h2(i+vec2(1,0)),f-vec2(1,0)),u.x),mix(dot(h2(i+vec2(0,1)),f-vec2(0,1)),dot(h2(i+vec2(1,1)),f-vec2(1,1)),u.x),u.y);}
+float fbm(vec2 p){float v=0.,a=0.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.+vec2(100.);a*=0.5;}return v;}
+void main(){
+    vec2 uv=gl_FragCoord.xy/r; float asp=r.x/r.y;
+    vec2 uvA=vec2(uv.x*asp,uv.y);
+    // Sunset sky
+    vec3 zenith=vec3(0.04,0.04,0.20);
+    vec3 mid=vec3(0.50,0.12,0.04);
+    vec3 hor=vec3(0.92,0.42,0.08);
+    float h=(uv.y-0.35)*2.5;
+    vec3 sky=h>0.?mix(mix(hor,mid,min(1.,h*2.)),zenith,min(1.,h)):mix(hor,mid,clamp(-h*3.,0.,1.));
+    vec3 sd=normalize(vec3(0.35*asp,0.35,1.));
+    float sun=max(dot(normalize(vec3(uvA.x-0.5*asp,uv.y-0.35,1.2)),sd),0.);
+    sky+=pow(sun,200.)*vec3(1.,0.97,0.85)*2.5+pow(sun,8.)*vec3(1.,0.55,0.15)*0.6;
+    // Simple 2D cloud proxy for sunset
+    vec2 cp=uvA*vec2(2.5,1.8)+vec2(t*0.03,0.35);
+    float w=fbm(cp*0.7+vec2(3.1,1.4))*0.3;
+    float cl=smoothstep(0.,0.8,fbm(cp+w)*clamp(uv.y*3.,0.,1.));
+    vec3 sunCol=vec3(1.0,0.50,0.15);
+    vec3 ambCol=mix(vec3(0.7,0.25,0.05),vec3(0.25,0.15,0.45),clamp(uv.y*2.,0.,1.));
+    float li=fbm(cp*1.8+1.)*0.5+0.45;
+    vec3 cc=mix(ambCol,sunCol,li*0.8);
+    vec3 col=mix(sky,cc,cl*0.85);
+    if(uv.y<0.08){ col=mix(vec3(0.06,0.025,0.008),col,uv.y/0.08); }
+    col=col/(col+0.9); col=pow(clamp(col,0.,1.),vec3(0.88));
+    gl_FragColor=vec4(col,1.);
+}`;
+    const p=mkProg(gl,fs);
+    const uT=gl.getUniformLocation(p,'t'),uR=gl.getUniformLocation(p,'r');
+    gl.uniform2f(uR,c.width,c.height);
+    (function loop(ts){ gl.uniform1f(uT,ts/1000); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(loop); })(0);
+})();
+</script>
+</body>
+</html>

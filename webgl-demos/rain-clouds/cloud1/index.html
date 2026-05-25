@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluffy Clouds — WebGL Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #ui {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 20px 24px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: none; color: #fff; font-family: monospace;
+        }
+        #ui a { pointer-events: all; color: #556; text-decoration: none; font-size: 13px; }
+        #ui a:hover { color: #99c; }
+        h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .sub { font-size: 11px; color: #558; line-height: 1.8; }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+    <div><a href="../">← Rain &amp; Clouds</a></div>
+    <div style="text-align:right">
+        <h2>Fluffy Clouds</h2>
+        <div class="sub">夏の積雲 · 太陽 · 地平線ヘイズ<br>Fragment Shader · fBm Noise · 6 Octaves</div>
+    </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+function resize() { canvas.width=window.innerWidth; canvas.height=window.innerHeight; gl.viewport(0,0,canvas.width,canvas.height); }
+resize(); window.addEventListener('resize', resize);
+
+const vs = `attribute vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }`;
+
+const fs = `
+precision highp float;
+uniform float u_t;
+uniform vec2 u_r;
+
+vec2 hash2(vec2 p){
+    p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));
+    return -1.0+2.0*fract(sin(p)*43758.5453);
+}
+float noise(vec2 p){
+    vec2 i=floor(p),f=fract(p);
+    vec2 u=f*f*(3.0-2.0*f);
+    return mix(mix(dot(hash2(i),f),
+                   dot(hash2(i+vec2(1,0)),f-vec2(1,0)),u.x),
+               mix(dot(hash2(i+vec2(0,1)),f-vec2(0,1)),
+                   dot(hash2(i+vec2(1,1)),f-vec2(1,1)),u.x),u.y);
+}
+float fbm(vec2 p){
+    float v=0.,a=0.5;
+    mat2 rot=mat2(0.80,-0.60,0.60,0.80);
+    for(int i=0;i<6;i++){ v+=a*noise(p); p=rot*p*2.1+vec2(100.); a*=0.5; }
+    return v;
+}
+
+float cloudLayer(vec2 uv, float speed, float scale, float vert, float thresh){
+    vec2 p=uv*vec2(scale,scale*vert)+vec2(u_t*speed,0.);
+    float warp=fbm(p*0.7+vec2(u_t*speed*0.3,1.5))*0.35;
+    float f=fbm(p+vec2(warp));
+    return smoothstep(thresh,thresh+0.55,f);
+}
+
+void main(){
+    vec2 uv=gl_FragCoord.xy/u_r;
+    float asp=u_r.x/u_r.y;
+    vec2 uvA=vec2(uv.x*asp,uv.y);
+
+    // Sky gradient
+    vec3 skyTop=vec3(0.10,0.38,0.82);
+    vec3 skyMid=vec3(0.42,0.68,0.95);
+    vec3 skyHor=vec3(0.70,0.84,0.97);
+    vec3 sky;
+    if(uv.y>0.5) sky=mix(skyMid,skyTop,(uv.y-0.5)*2.0);
+    else          sky=mix(skyHor,skyMid,uv.y*2.0);
+
+    // Sun
+    vec2 sunPos=vec2(0.78*asp,0.82);
+    float sunD=length(uvA-sunPos);
+    vec3 sunGlow=vec3(1.0,0.96,0.72)*exp(-sunD*5.5)*0.40;
+    vec3 sunDisk=vec3(1.0,0.98,0.85)*smoothstep(0.060,0.040,sunD);
+    sky+=sunGlow+sunDisk;
+
+    // Horizon haze
+    sky=mix(sky,vec3(0.75,0.88,0.98),smoothstep(0.28,0.0,uv.y)*0.45);
+
+    // Cloud layers (back to front)
+    float c3=cloudLayer(uvA,0.020,2.0,0.7,0.05);  // far/high
+    float c2=cloudLayer(uvA,0.035,3.0,0.8,0.08);  // mid
+    float c1=cloudLayer(uvA,0.055,4.5,1.0,0.10);  // near/large
+
+    // Cloud shading: top = bright white, base = blue-grey shadow
+    vec2 shadeP3=uvA*vec2(2.0,2.0*0.7)+vec2(u_t*0.020+0.7,0.5);
+    vec2 shadeP2=uvA*vec2(3.0,3.0*0.8)+vec2(u_t*0.035+1.4,1.0);
+    vec2 shadeP1=uvA*vec2(4.5,4.5*1.0)+vec2(u_t*0.055+2.1,1.7);
+
+    float s3=fbm(shadeP3*1.8+1.0)*0.5+0.55;
+    float s2=fbm(shadeP2*1.8+1.0)*0.5+0.55;
+    float s1=fbm(shadeP1*1.8+1.0)*0.5+0.55;
+
+    vec3 cloudLight=vec3(1.00,1.00,0.98);
+    vec3 cloudShad=vec3(0.68,0.72,0.82);
+
+    vec3 col=sky;
+    col=mix(col,mix(cloudShad,cloudLight,s3)*0.90, c3*0.65);
+    col=mix(col,mix(cloudShad,cloudLight,s2)*0.95, c2*0.80);
+    col=mix(col,mix(cloudShad,cloudLight,s1)*1.00, c1);
+
+    // Bird silhouettes (simple V shapes)
+    float b1=min(abs(uvA.x-0.45*asp-sin(u_t*0.8)*0.02),
+                 abs(uvA.x-0.45*asp+0.03+sin(u_t*0.8)*0.02));
+    float bird1=smoothstep(0.003,0.,b1)*step(abs(uvA.y-0.70),0.008)*step(0.44*asp,uvA.x);
+    col=mix(col,vec3(0.05,0.06,0.12),bird1*0.8);
+
+    // Gamma
+    col=pow(clamp(col,0.,1.),vec3(0.95));
+    gl_FragColor=vec4(col,1.0);
+}`;
+
+function mk(t,s){ const sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(sh)); return sh; }
+const prog=gl.createProgram();
+gl.attachShader(prog,mk(gl.VERTEX_SHADER,vs));
+gl.attachShader(prog,mk(gl.FRAGMENT_SHADER,fs));
+gl.linkProgram(prog); gl.useProgram(prog);
+const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const aloc=gl.getAttribLocation(prog,'a');
+gl.enableVertexAttribArray(aloc); gl.vertexAttribPointer(aloc,2,gl.FLOAT,false,0,0);
+const uT=gl.getUniformLocation(prog,'u_t'), uR=gl.getUniformLocation(prog,'u_r');
+function draw(t){ gl.uniform1f(uT,t/1000); gl.uniform2f(uR,canvas.width,canvas.height); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(draw); }
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

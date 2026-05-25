@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storm Clouds — WebGL Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #ui {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 20px 24px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: none; color: #fff; font-family: monospace;
+        }
+        #ui a { pointer-events: all; color: #445; text-decoration: none; font-size: 13px; }
+        #ui a:hover { color: #889; }
+        h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .sub { font-size: 11px; color: #445; line-height: 1.8; }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+    <div><a href="../">← Rain &amp; Clouds</a></div>
+    <div style="text-align:right">
+        <h2>Storm Clouds</h2>
+        <div class="sub">積乱雲 · 稲妻 · 雷光フラッシュ<br>Fragment Shader · Turbulent fBm · Procedural Lightning</div>
+    </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+function resize() { canvas.width=window.innerWidth; canvas.height=window.innerHeight; gl.viewport(0,0,canvas.width,canvas.height); }
+resize(); window.addEventListener('resize', resize);
+
+const vs = `attribute vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }`;
+
+const fs = `
+precision highp float;
+uniform float u_t;
+uniform vec2 u_r;
+
+float h1(float n){ return fract(sin(n)*43758.5453); }
+vec2 hash2(vec2 p){
+    p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));
+    return -1.0+2.0*fract(sin(p)*43758.5453);
+}
+float noise(vec2 p){
+    vec2 i=floor(p),f=fract(p);
+    vec2 u=f*f*(3.0-2.0*f);
+    return mix(mix(dot(hash2(i),f),
+                   dot(hash2(i+vec2(1,0)),f-vec2(1,0)),u.x),
+               mix(dot(hash2(i+vec2(0,1)),f-vec2(0,1)),
+                   dot(hash2(i+vec2(1,1)),f-vec2(1,1)),u.x),u.y);
+}
+float fbm(vec2 p){
+    float v=0.,a=0.5;
+    mat2 rot=mat2(0.72,-0.69,0.69,0.72);
+    for(int i=0;i<7;i++){ v+=a*noise(p); p=rot*p*2.15+vec2(100.); a*=0.52; }
+    return v;
+}
+
+float stormCloud(vec2 p, float tOffset){
+    vec2 q=p*vec2(2.2,1.6)+vec2(u_t*0.038+tOffset,0.);
+    // Domain warping for turbulence
+    float warp1=fbm(q*0.6+vec2(u_t*0.012,0.7));
+    float warp2=fbm(q*0.9+vec2(u_t*0.008+3.1,1.3));
+    vec2 warpedP=q+vec2(warp1*0.40,warp2*0.25);
+    float f=fbm(warpedP);
+    // Shape: wide at top, tapers at bottom
+    float taper=smoothstep(0.0,0.5,p.y)*smoothstep(1.0,0.6,p.y);
+    f=smoothstep(0.0,0.7,f)*taper;
+    return f;
+}
+
+// Jagged lightning bolt
+float bolt(vec2 uv, float x0, float seed, float len){
+    float d=1000.0;
+    float x=x0;
+    float N=14.0;
+    for(int i=0;i<14;i++){
+        float fi=float(i);
+        float y0=1.0-fi/N*len;
+        float y1=1.0-(fi+1.0)/N*len;
+        float xOff=(h1(seed+fi*3.1)-0.5)*0.06;
+        float x1=x+xOff;
+        // Line segment (x,y0) to (x1,y1)
+        vec2 a=vec2(x,y0),b=vec2(x1,y1),p2=uv;
+        vec2 pa=p2-a,ba=b-a;
+        float hv=clamp(dot(pa,ba)/dot(ba,ba),0.,1.);
+        d=min(d,length(pa-ba*hv));
+        // Branch
+        if(fi==4.0||fi==8.0){
+            float bx=x,by=y0;
+            for(int j=0;j<5;j++){
+                float bxOff=(h1(seed*2.3+fi*7.1+float(j)*2.9)-0.5)*0.05;
+                float byOff=-float(j+1)*0.04;
+                float bx2=bx+bxOff, by2=by+byOff;
+                vec2 ba2=vec2(bx,by),bb2=vec2(bx2,by2);
+                vec2 pab2=p2-ba2,bab2=bb2-ba2;
+                float hb=clamp(dot(pab2,bab2)/dot(bab2,bab2),0.,1.);
+                d=min(d,length(pab2-bab2*hb));
+                bx=bx2; by=by2;
+            }
+        }
+        x=x1;
+    }
+    return d;
+}
+
+void main(){
+    vec2 uv=gl_FragCoord.xy/u_r;
+    float asp=u_r.x/u_r.y;
+    vec2 uvA=vec2(uv.x*asp,uv.y);
+
+    // Lightning timing (two independent bolts)
+    float lt1=mod(u_t*0.50,10.0);
+    float lt2=mod(u_t*0.50+4.3,10.0);
+    float flash=0.0;
+    float boltD1=1000.0, boltD2=1000.0;
+
+    if(lt1<0.15){ flash+=smoothstep(0.15,0.,lt1)*0.85; boltD1=bolt(uv,0.30,1.5,0.75); }
+    if(lt2<0.12){ flash+=smoothstep(0.12,0.,lt2)*0.65; boltD2=bolt(uv,0.65,3.8,0.65); }
+
+    float boltGlow=exp(-boltD1*220.0)*step(boltD1,0.008)+exp(-boltD2*220.0)*step(boltD2,0.008);
+    float boltLine_=smoothstep(0.0045,0.,boltD1)+smoothstep(0.0045,0.,boltD2);
+
+    // Dark stormy sky
+    vec3 col=mix(vec3(0.015,0.016,0.024),vec3(0.030,0.032,0.050),uv.y*0.8);
+    col+=flash*vec3(0.40,0.45,0.70)*(0.4+0.6*uv.y);
+
+    // Storm clouds (two layers, different speeds/positions)
+    float sc1=stormCloud(uvA,0.0);
+    float sc2=stormCloud(uvA+vec2(4.5,0.0),2.3)*0.80;
+    float sc3=stormCloud(uvA+vec2(-3.1,0.2),4.7)*0.60;
+    float totalCloud=clamp(sc1+sc2+sc3,0.0,1.0);
+
+    // Cloud internal shading
+    vec2 shP=uvA*vec2(2.2,1.6)+vec2(u_t*0.038+1.5,0.8);
+    float internalLight=fbm(shP*1.5+vec2(u_t*0.015));
+    float edgeLight=1.0-totalCloud*0.8; // edges lighter
+
+    vec3 cloudBase=vec3(0.055,0.060,0.085);
+    vec3 cloudMid =vec3(0.100,0.110,0.150);
+    vec3 cloudEdge=vec3(0.200,0.215,0.270);
+
+    float li=internalLight*0.5+0.25;
+    vec3 cloudCol=mix(cloudBase,mix(cloudMid,cloudEdge,edgeLight),li);
+    cloudCol+=flash*vec3(0.50,0.55,0.80)*0.70;
+
+    // Illumination from lightning
+    cloudCol+=boltGlow*vec3(0.60,0.65,0.90)*0.50;
+
+    col=mix(col,cloudCol,totalCloud);
+
+    // Dark ground
+    float groundY=0.14;
+    if(uv.y<groundY){
+        vec3 gc=vec3(0.006,0.007,0.010);
+        gc+=flash*vec3(0.04,0.05,0.08);
+        gc+=boltGlow*vec3(0.08,0.09,0.14)*0.4;
+        col=gc;
+    }
+
+    // Lightning bolt rendering
+    float boltBright=max(boltLine_,boltGlow*0.6)*(lt1<0.15?1.0:0.0)+max(boltLine_,boltGlow*0.6)*(lt2<0.12?1.0:0.0);
+    col+=boltBright*vec3(0.88,0.92,1.0)*(1.0-step(groundY,1.0)*step(uv.y,groundY)*0.5);
+    // Soft bolt glow
+    col+=boltGlow*vec3(0.50,0.58,0.90)*0.8;
+
+    // Rain (background)
+    float rainH=h1(floor(uv.x*120.0)*0.73+floor(u_t*18.0)*0.17+1.3);
+    float rainV=fract(uv.y*30.0+u_t*1.5+rainH*10.0);
+    float rainDrop=smoothstep(0.96,1.0,rainV)*smoothstep(0.004,0.,abs(fract(uv.x*120.0)-rainH));
+    col+=rainDrop*vec3(0.20,0.25,0.40)*0.35;
+
+    // Vignette
+    vec2 vc=uv*2.0-1.0;
+    col*=1.0-dot(vc,vc)*0.28;
+
+    gl_FragColor=vec4(col,1.0);
+}`;
+
+function mk(t,s){ const sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(sh)); return sh; }
+const prog=gl.createProgram();
+gl.attachShader(prog,mk(gl.VERTEX_SHADER,vs));
+gl.attachShader(prog,mk(gl.FRAGMENT_SHADER,fs));
+gl.linkProgram(prog); gl.useProgram(prog);
+const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const aloc=gl.getAttribLocation(prog,'a');
+gl.enableVertexAttribArray(aloc); gl.vertexAttribPointer(aloc,2,gl.FLOAT,false,0,0);
+const uT=gl.getUniformLocation(prog,'u_t'), uR=gl.getUniformLocation(prog,'u_r');
+function draw(t){ gl.uniform1f(uT,t/1000); gl.uniform2f(uR,canvas.width,canvas.height); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(draw); }
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

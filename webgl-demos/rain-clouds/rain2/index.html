@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Rain — WebGL Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #ui {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 20px 24px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: none; color: #fff; font-family: monospace;
+        }
+        #ui a { pointer-events: all; color: #446; text-decoration: none; font-size: 13px; }
+        #ui a:hover { color: #88c; }
+        h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .sub { font-size: 11px; color: #446; line-height: 1.8; }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+    <div><a href="../">← Rain &amp; Clouds</a></div>
+    <div style="text-align:right">
+        <h2>Neon Rain</h2>
+        <div class="sub">サイバーパンク · ネオン反射 · 濡れた地面<br>Fragment Shader · Procedural Buildings</div>
+    </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+function resize() { canvas.width=window.innerWidth; canvas.height=window.innerHeight; gl.viewport(0,0,canvas.width,canvas.height); }
+resize(); window.addEventListener('resize', resize);
+
+const vs = `attribute vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }`;
+
+const fs = `
+precision highp float;
+uniform float u_t;
+uniform vec2 u_r;
+
+float h1(float n){ return fract(sin(n)*43758.5453); }
+float h2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+
+// Building height
+float bldH(float x){ return h1(floor(x*14.0)*0.53+3.1)*0.32+0.10; }
+float inBld(vec2 uv){
+    float gY=0.15;
+    return step(gY,uv.y)*step(uv.y,gY+bldH(uv.x));
+}
+
+// Neon color by index
+vec3 neonCol(float idx){
+    float c=fract(idx*0.37);
+    if(c<0.25) return vec3(0.0,1.0,1.0);  // cyan
+    if(c<0.50) return vec3(1.0,0.0,0.9);  // magenta
+    if(c<0.75) return vec3(0.2,1.0,0.3);  // green
+    return vec3(1.0,0.5,0.0);             // orange
+}
+
+// Building edge glow
+float bldEdge(vec2 uv, float bw){
+    float xe=fract(uv.x/bw)*bw;
+    return smoothstep(0.004,0.,min(xe,bw-xe));
+}
+
+// Rain streak
+float rain(vec2 uv,float xs,float ys,float spd,float wind){
+    vec2 ruv=uv*vec2(xs,ys);
+    ruv.x+=uv.y*wind;
+    vec2 cell=floor(ruv), loc=fract(ruv);
+    float hv=h2(cell);
+    float xp=0.1+hv*0.8;
+    float yp=fract(u_t*spd+h2(cell+7.1));
+    float dx=abs(loc.x-xp);
+    float dy=loc.y-(1.0-yp);
+    return smoothstep(0.015,0.,dx)*smoothstep(0.22,0.,max(dy,0.))*step(0.,dy)*(0.35+0.65*hv);
+}
+
+// Colored rain: each column gets a neon color
+vec3 neonRain(vec2 uv){
+    float bw=1.0/14.0;
+    float idx=floor(uv.x/bw);
+    vec3 col1=neonCol(idx);
+    vec3 col2=neonCol(idx+1.0);
+    float r1=rain(uv,85.,32.,1.30,-0.15)*0.80;
+    float r2=rain(uv,55.,20.,1.00,-0.12)*0.55;
+    float r3=rain(uv,35.,13.,0.75,-0.09)*0.38;
+    float total=clamp(r1+r2+r3,0.,1.);
+    // Mix colors based on x sub-position
+    vec3 rc=mix(col1,col2,fract(uv.x/bw));
+    return rc*total;
+}
+
+// Ground fog / atmosphere
+vec3 groundFog(vec2 uv){
+    vec3 col=vec3(0.005,0.003,0.010);
+    // Reflections of neon edges
+    float bw=1.0/14.0;
+    vec2 rUV=vec2(uv.x,0.15*2.0-uv.y);
+    float rb=inBld(rUV);
+    float re=bldEdge(rUV,bw)*rb;
+    float ridx=floor(rUV.x/bw);
+    col+=neonCol(ridx)*re*0.5;
+    // Ripple in ground
+    float rip=sin(uv.x*100.0+u_t*5.0)*0.003+sin(uv.x*70.0-u_t*3.5)*0.004;
+    col+=neonCol(floor((uv.x+rip)*14.0))*max(0.,rip+0.003)*2.0;
+    return col;
+}
+
+void main(){
+    vec2 uv=gl_FragCoord.xy/u_r;
+
+    // Deep purple-blue sky
+    vec3 col=mix(vec3(0.012,0.005,0.028),vec3(0.025,0.010,0.055),uv.y);
+    // Atmospheric glow near ground
+    col+=exp(-uv.y*6.0)*vec3(0.02,0.00,0.04)*0.8;
+
+    float gY=0.15;
+    float ib=inBld(uv);
+    float ig=step(uv.y,gY);
+
+    float bw=1.0/14.0;
+
+    if(ib>0.5){
+        // Building: dark with neon edges
+        vec3 bc=vec3(0.005,0.003,0.012);
+        float edge=bldEdge(uv,bw);
+        float bidx=floor(uv.x/bw);
+        bc+=neonCol(bidx)*edge*1.8;
+        // Window grid
+        vec2 wc=floor(uv*vec2(42.,18.));
+        float won=step(0.65,h2(wc));
+        vec2 wuv=fract(uv*vec2(42.,18.));
+        float win=step(0.1,wuv.x)*step(wuv.x,0.9)*step(0.1,wuv.y)*step(wuv.y,0.9)*won;
+        bc+=win*neonCol(bidx)*0.4;
+        col=bc;
+    } else if(ig>0.5){
+        col=groundFog(uv);
+    }
+
+    // Neon rain streaks
+    vec3 nr=neonRain(uv);
+    float rainOpacity=ib>0.5?0.15:(ig>0.5?0.55:1.0);
+    col+=nr*rainOpacity;
+
+    // Neon edge glow spill into sky
+    if(ib<0.5&&ig<0.5){
+        float edge=bldEdge(uv,bw)*inBld(uv);
+        float bidx2=floor(uv.x/bw);
+        col+=neonCol(bidx2)*edge*0.06;
+    }
+
+    // Ground fog at very bottom
+    col=mix(col,vec3(0.008,0.002,0.018),smoothstep(0.12,0.0,uv.y)*0.6);
+
+    // Vignette
+    vec2 vc=uv*2.0-1.0;
+    col*=1.0-dot(vc,vc)*0.30;
+
+    gl_FragColor=vec4(col,1.0);
+}`;
+
+function mk(t,s){ const sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(sh)); return sh; }
+const prog=gl.createProgram();
+gl.attachShader(prog,mk(gl.VERTEX_SHADER,vs));
+gl.attachShader(prog,mk(gl.FRAGMENT_SHADER,fs));
+gl.linkProgram(prog); gl.useProgram(prog);
+const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const aloc=gl.getAttribLocation(prog,'a');
+gl.enableVertexAttribArray(aloc); gl.vertexAttribPointer(aloc,2,gl.FLOAT,false,0,0);
+const uT=gl.getUniformLocation(prog,'u_t'), uR=gl.getUniformLocation(prog,'u_r');
+function draw(t){ gl.uniform1f(uT,t/1000); gl.uniform2f(uR,canvas.width,canvas.height); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(draw); }
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

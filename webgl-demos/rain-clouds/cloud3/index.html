@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset Volumetric Clouds — WebGL Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #ui {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 20px 24px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: none; color: #fff; font-family: monospace;
+        }
+        #ui a { pointer-events: all; color: #654; text-decoration: none; font-size: 13px; }
+        #ui a:hover { color: #cb8; }
+        h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .sub { font-size: 11px; color: #654; line-height: 1.8; }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+    <div><a href="../">← Rain &amp; Clouds</a></div>
+    <div style="text-align:right">
+        <h2>Sunset Volumetric Clouds</h2>
+        <div class="sub">体積雲 · 夕焼け · 光の透過<br>Raymarching · 3D Noise · Transmittance</div>
+    </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+function resize() { canvas.width=window.innerWidth; canvas.height=window.innerHeight; gl.viewport(0,0,canvas.width,canvas.height); }
+resize(); window.addEventListener('resize', resize);
+
+const vs = `attribute vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }`;
+
+const fs = `
+precision highp float;
+uniform float u_t;
+uniform vec2 u_r;
+
+// 3D value noise using hash
+vec3 hash3(vec3 p){
+    p=fract(p*vec3(443.897,441.423,437.195));
+    p+=dot(p,p.yxz+19.19);
+    return fract((p.xxy+p.yxx)*p.zyx);
+}
+float noise3(vec3 p){
+    vec3 i=floor(p),f=fract(p);
+    vec3 u=f*f*(3.0-2.0*f);
+    vec3 h000=hash3(i),          h100=hash3(i+vec3(1,0,0));
+    vec3 h010=hash3(i+vec3(0,1,0)),h110=hash3(i+vec3(1,1,0));
+    vec3 h001=hash3(i+vec3(0,0,1)),h101=hash3(i+vec3(1,0,1));
+    vec3 h011=hash3(i+vec3(0,1,1)),h111=hash3(i+vec3(1,1,1));
+    float v000=dot(h000*2.-1.,f);
+    float v100=dot(h100*2.-1.,f-vec3(1,0,0));
+    float v010=dot(h010*2.-1.,f-vec3(0,1,0));
+    float v110=dot(h110*2.-1.,f-vec3(1,1,0));
+    float v001=dot(h001*2.-1.,f-vec3(0,0,1));
+    float v101=dot(h101*2.-1.,f-vec3(1,0,1));
+    float v011=dot(h011*2.-1.,f-vec3(0,1,1));
+    float v111=dot(h111*2.-1.,f-vec3(1,1,1));
+    return mix(mix(mix(v000,v100,u.x),mix(v010,v110,u.x),u.y),
+               mix(mix(v001,v101,u.x),mix(v011,v111,u.x),u.y),u.z);
+}
+float fbm3(vec3 p){
+    float v=0.,a=0.5;
+    for(int i=0;i<5;i++){ v+=a*noise3(p); p=p*2.0+vec3(100.); a*=0.5; }
+    return v;
+}
+
+// Cloud density at world position
+float cloudDensity(vec3 p){
+    // Cloud layer: y between 1.0 and 3.5
+    float layerFade=smoothstep(0.0,0.6,p.y-1.0)*smoothstep(0.0,0.6,3.5-p.y);
+    if(layerFade<0.001) return 0.0;
+    // Animate cloud drift
+    vec3 q=p*vec3(0.55,0.90,0.55)+vec3(u_t*0.030,0.,u_t*0.012);
+    // Domain warp for turbulence
+    float w=fbm3(q*0.8+vec3(4.1,2.3,1.7))*0.30;
+    float density=fbm3(q+w);
+    density=clamp(density*2.8-0.25,0.0,1.0);
+    return density*layerFade;
+}
+
+// Sunset sky color
+vec3 sunsetSky(vec3 rd){
+    vec3 sunDir=normalize(vec3(0.35,0.05,1.0));
+    float sun=max(dot(rd,sunDir),0.0);
+    float h=clamp(rd.y,-1.0,1.0);
+
+    // Sky gradient: zenith=deep blue, horizon=orange/red
+    vec3 zenith =vec3(0.04,0.04,0.20);
+    vec3 mid    =vec3(0.50,0.12,0.04);
+    vec3 horizon=vec3(0.92,0.42,0.08);
+
+    vec3 sky;
+    if(h>0.0) sky=mix(mix(horizon,mid,h*3.0),zenith,min(1.0,h*2.0));
+    else       sky=mix(horizon,mid,clamp(-h*4.0,0.,1.));
+
+    // Sun disk + corona
+    sky+=pow(sun,300.0)*vec3(1.0,0.98,0.90)*3.0;
+    sky+=pow(sun,12.0)*vec3(1.0,0.70,0.30)*0.80;
+    sky+=pow(sun,4.0)*vec3(1.0,0.45,0.10)*0.40;
+
+    return sky;
+}
+
+void main(){
+    vec2 uv=(gl_FragCoord.xy/u_r)*2.0-1.0;
+    uv.x*=u_r.x/u_r.y;
+
+    // Camera: slightly elevated, looking toward horizon
+    vec3 ro=vec3(0.0,1.5,0.0);
+    vec3 rd=normalize(vec3(uv.x*0.85, uv.y*0.50+0.08, 1.2));
+
+    vec3 col=sunsetSky(rd);
+
+    // Only raymarch if ray goes upward or is near-horizontal
+    if(rd.y>-0.02){
+        // Find cloud layer intersections
+        float tEnter=(1.0-ro.y)/rd.y;
+        float tExit =(3.5-ro.y)/rd.y;
+        if(tEnter>tExit){ float tmp=tEnter; tEnter=tExit; tExit=tmp; }
+        tEnter=max(tEnter,0.0);
+        tExit=min(tExit,30.0);
+
+        if(tExit>tEnter){
+            int STEPS=28;
+            float dt=(tExit-tEnter)/float(STEPS);
+            float transmittance=1.0;
+            vec3 scattered=vec3(0.0);
+            vec3 sunDir=normalize(vec3(0.35,0.05,1.0));
+
+            for(int i=0;i<28;i++){
+                float t=tEnter+(float(i)+0.5)*dt;
+                vec3 p=ro+rd*t;
+                float dens=cloudDensity(p);
+                if(dens<0.005) continue;
+
+                // Shadow: march toward sun for shadow
+                float shadowDens=cloudDensity(p+sunDir*0.8)*0.7+
+                                  cloudDensity(p+sunDir*1.6)*0.3;
+                float shadow=exp(-shadowDens*4.5);
+
+                // Cloud color from sun + ambient sky
+                vec3 sunCol =vec3(1.00,0.52,0.18); // warm orange
+                vec3 ambTop =vec3(0.30,0.18,0.50); // purple zenith scatter
+                vec3 ambBot =vec3(0.70,0.28,0.05); // warm base scatter
+                float upFrac=clamp((p.y-1.0)/2.5,0.,1.);
+                vec3 cloudCol=sunCol*shadow+mix(ambBot,ambTop,upFrac)*(1.0-shadow*0.7);
+
+                float absorption=exp(-dens*dt*7.0);
+                scattered+=transmittance*cloudCol*dens*dt*6.0;
+                transmittance*=absorption;
+                if(transmittance<0.01) break;
+            }
+            col=col*transmittance+scattered;
+        }
+    }
+
+    // Ground plane
+    if(rd.y<-0.01){
+        float tGnd=(0.0-ro.y)/rd.y;
+        if(tGnd>0.0&&tGnd<60.0){
+            float fog=clamp(tGnd/40.0,0.,1.);
+            vec3 gndCol=vec3(0.06,0.025,0.008);
+            // Horizon glow on ground
+            float glowAngle=max(dot(normalize(vec3(rd.x,0.,rd.z)),normalize(vec3(0.35,0.,1.0))),0.);
+            gndCol+=pow(glowAngle,4.0)*vec3(0.30,0.08,0.01)*0.5;
+            col=mix(col,mix(gndCol,sunsetSky(normalize(vec3(rd.x,0.,rd.z)))*0.3,fog),
+                    clamp(tGnd*0.05,0.,1.));
+        }
+    }
+
+    // Reinhard tone-mapping
+    col=col/(col+vec3(0.9));
+    col=pow(clamp(col,0.,1.),vec3(0.88));
+
+    gl_FragColor=vec4(col,1.0);
+}`;
+
+function mk(t,s){ const sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(sh)); return sh; }
+const prog=gl.createProgram();
+gl.attachShader(prog,mk(gl.VERTEX_SHADER,vs));
+gl.attachShader(prog,mk(gl.FRAGMENT_SHADER,fs));
+gl.linkProgram(prog); gl.useProgram(prog);
+const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const aloc=gl.getAttribLocation(prog,'a');
+gl.enableVertexAttribArray(aloc); gl.vertexAttribPointer(aloc,2,gl.FLOAT,false,0,0);
+const uT=gl.getUniformLocation(prog,'u_t'), uR=gl.getUniformLocation(prog,'u_r');
+function draw(t){ gl.uniform1f(uT,t/1000); gl.uniform2f(uR,canvas.width,canvas.height); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); requestAnimationFrame(draw); }
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
