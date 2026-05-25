@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wavy Horizon — WebGL</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #050508; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow-x: hidden; }
+        header { padding: 28px 40px; border-bottom: 1px solid #1a1a2e; }
+        header a { color: #555; text-decoration: none; font-size: 13px; font-family: monospace; }
+        header a:hover { color: #aaa; }
+        h1 { margin-top: 12px; font-size: 26px; font-weight: 700; letter-spacing: -0.3px; }
+        .subtitle { margin-top: 6px; color: #555; font-size: 13px; }
+        .demos { display: flex; flex-direction: column; }
+        .demo { position: relative; }
+        canvas { display: block; width: 100%; height: 340px; }
+        @media (min-width: 900px) { canvas { height: calc((100vh - 96px) / 3); } }
+        .info {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 60px 28px 20px;
+            background: linear-gradient(transparent, rgba(0,0,0,.55));
+            pointer-events: none;
+        }
+        .info-title { font-size: 18px; font-weight: 600; text-shadow: 0 1px 6px #000; }
+        .info-desc  { font-size: 12px; color: #ccc; margin-top: 4px; text-shadow: 0 1px 4px #000; }
+        .info-tag {
+            display: inline-block; margin-top: 8px;
+            padding: 2px 9px;
+            background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15);
+            border-radius: 12px; font-size: 10px; color: #88aacc; font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <a href="../">← WebGL Demos</a>
+    <h1>Wavy Horizon</h1>
+    <p class="subtitle">3 種類の波打つ水平線アニメーション — フラグメントシェーダーで描画</p>
+</header>
+
+<div class="demos">
+    <div class="demo">
+        <canvas id="c1"></canvas>
+        <div class="info">
+            <div class="info-title">Sunset Ocean</div>
+            <div class="info-desc">重ね合わせた正弦波で海面と夕陽を表現</div>
+            <span class="info-tag">Layered Sine Waves · Sun Glow</span>
+        </div>
+    </div>
+    <div class="demo">
+        <canvas id="c2"></canvas>
+        <div class="info">
+            <div class="info-title">Neon Grid</div>
+            <div class="info-desc">パース変換したグリッドとネオン霓虹の水平線</div>
+            <span class="info-tag">Perspective Grid · Synthwave</span>
+        </div>
+    </div>
+    <div class="demo">
+        <canvas id="c3"></canvas>
+        <div class="info">
+            <div class="info-title">Aurora</div>
+            <div class="info-desc">fBm ノイズで揺れるオーロラの水平線</div>
+            <span class="info-tag">fBm Noise · Alpha Blend</span>
+        </div>
+    </div>
+</div>
+
+<script>
+function setup(id, fsSrc) {
+    const canvas = document.getElementById(id);
+    const gl = canvas.getContext('webgl');
+    function resize() {
+        const dpr = devicePixelRatio;
+        canvas.width  = canvas.clientWidth  * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    resize();
+    new ResizeObserver(resize).observe(canvas);
+
+    const vs = `attribute vec2 a;void main(){gl_Position=vec4(a,0,1);}`;
+    const mk = (type, src) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+            console.error(id, gl.getShaderInfoLog(s));
+        return s;
+    };
+    const pr = gl.createProgram();
+    gl.attachShader(pr, mk(gl.VERTEX_SHADER, vs));
+    gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, fsSrc));
+    gl.linkProgram(pr);
+    gl.useProgram(pr);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+    const al = gl.getAttribLocation(pr, 'a');
+    gl.enableVertexAttribArray(al);
+    gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
+
+    const tL = gl.getUniformLocation(pr, 'u_t');
+    const rL = gl.getUniformLocation(pr, 'u_r');
+
+    function draw(ms) {
+        gl.uniform1f(tL, ms / 1000);
+        gl.uniform2f(rL, canvas.width, canvas.height);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+}
+
+/* ── 1. Sunset Ocean ─────────────────────────────────────────── */
+setup('c1', `precision highp float;
+uniform float u_t;
+uniform vec2  u_r;
+
+void main() {
+    vec2  uv  = gl_FragCoord.xy / u_r;
+    float asp = u_r.x / u_r.y;
+
+    /* layered sine waves */
+    float w = 0.030 * sin(uv.x * 5.0 * asp + u_t * 0.70)
+            + 0.018 * sin(uv.x * 9.0 * asp - u_t * 1.10 + 0.50)
+            + 0.010 * sin(uv.x * 15.0* asp + u_t * 1.80 + 1.20)
+            + 0.006 * sin(uv.x * 24.0* asp - u_t * 2.30 + 2.50)
+            + 0.014 * sin(uv.x * 3.5 * asp + u_t * 0.40 + 3.10);
+    float h = 0.42 + w;
+
+    vec3 col;
+    if (uv.y >= h) {
+        /* sky: orange → purple → deep blue */
+        float t = clamp((uv.y - h) / (1.0 - h), 0.0, 1.0);
+        vec3 s0 = vec3(0.98, 0.52, 0.18);
+        vec3 s1 = vec3(0.55, 0.18, 0.52);
+        vec3 s2 = vec3(0.04, 0.05, 0.22);
+        col = t < 0.35 ? mix(s0, s1, t / 0.35)
+                       : mix(s1, s2, (t - 0.35) / 0.65);
+    } else {
+        /* ocean: shallow → deep */
+        float d = clamp((h - uv.y) / h, 0.0, 1.0);
+        col = mix(vec3(0.12, 0.40, 0.62), vec3(0.02, 0.07, 0.18), d * 1.8);
+        /* warm horizon reflection */
+        col = mix(col, vec3(0.98, 0.52, 0.18), exp(-d * 9.0) * 0.38);
+    }
+
+    /* sun disk */
+    vec2  sunPos = vec2(0.38, h + 0.15);
+    float sd = length(uv - sunPos);
+    col = mix(col, vec3(1.0, 0.97, 0.75), smoothstep(0.048, 0.030, sd));
+    col += exp(-sd * 7.0) * 0.18 * vec3(1.0, 0.65, 0.25);
+
+    /* horizon glow */
+    col += exp(-abs(uv.y - h) * 28.0) * 0.22 * vec3(1.0, 0.58, 0.25);
+
+    /* foam at wave crest */
+    col += smoothstep(0.012, 0.0, abs(uv.y - h)) * 0.45 * vec3(1.0, 0.88, 0.72);
+
+    /* vignette */
+    vec2 v = uv * 2.0 - 1.0;
+    col *= 1.0 - dot(v, v) * 0.28;
+
+    gl_FragColor = vec4(col, 1.0);
+}`);
+
+/* ── 2. Neon Grid ────────────────────────────────────────────── */
+setup('c2', `precision highp float;
+uniform float u_t;
+uniform vec2  u_r;
+
+float gridLine(float v, float s) {
+    return 1.0 - smoothstep(0.010, 0.025, abs(mod(v + s * 0.5, s) - s * 0.5));
+}
+
+void main() {
+    vec2  uv  = gl_FragCoord.xy / u_r;
+    float asp = u_r.x / u_r.y;
+
+    /* wavy horizon */
+    float w = 0.022 * sin(uv.x * 6.0 * asp + u_t * 1.10)
+            + 0.015 * sin(uv.x * 11.0* asp - u_t * 1.70 + 1.00)
+            + 0.020 * sin(uv.x * 3.5 * asp + u_t * 0.55 + 2.30);
+    float h = 0.45 + w;
+
+    vec3 col = vec3(0.0);
+
+    if (uv.y < h) {
+        /* ground: perspective grid */
+        float d   = clamp((h - uv.y) / h, 0.001, 1.0);
+        float px  = (uv.x - 0.5) / d;
+        float pz  =  0.25 / d;
+        float gx  = gridLine(px * 0.5, 0.5);
+        float gz  = gridLine(pz - u_t * 0.35, 0.5);
+        float g   = max(gx, gz);
+        float fade = exp(-d * 2.5) * 0.8;
+        col = vec3(0.01, 0.04, 0.10);
+        col += g * fade * vec3(0.05, 0.85, 1.00);
+        /* near-horizon ground glow */
+        col += exp(-(h - uv.y) * 18.0) * 0.60 * vec3(0.90, 0.10, 0.85);
+    } else {
+        /* sky: deep purple-black */
+        float skyT = (uv.y - h) / (1.0 - h);
+        col = mix(vec3(0.04, 0.01, 0.10), vec3(0.01, 0.005, 0.04), skyT);
+
+        /* stars */
+        vec2  sp = uv * vec2(asp, 1.0) * 90.0;
+        vec2  sc = floor(sp);
+        vec2  sf = fract(sp);
+        float sh  = fract(sin(dot(sc, vec2(127.1, 311.7))) * 43758.5);
+        float sh2 = fract(sin(dot(sc, vec2(269.5, 183.3))) * 17843.0);
+        if (sh > 0.50) {
+            float tw = 0.6 + 0.4 * sin(u_t * (1.0 + sh2 * 3.0) + sh * 6.28);
+            col += sh2 * tw * smoothstep(0.20, 0.0, length(sf - 0.5)) * 0.9;
+        }
+    }
+
+    /* neon band 1: cyan */
+    col += exp(-abs(uv.y - h) * 55.0) * 0.90 * vec3(0.0, 0.95, 1.00);
+
+    /* neon band 2: magenta, slight wave offset */
+    float w2 = 0.008 * sin(uv.x * 10.0 * asp + u_t * 1.5 + 1.0);
+    col += exp(-abs(uv.y - (h + w2 + 0.012)) * 75.0) * 0.70 * vec3(1.00, 0.08, 0.85);
+
+    /* neon band 3: yellow-orange */
+    float w3 = 0.010 * sin(uv.x * 7.0 * asp - u_t * 0.9 + 2.5);
+    col += exp(-abs(uv.y - (h + w3 - 0.018)) * 75.0) * 0.60 * vec3(0.95, 0.75, 0.00);
+
+    /* vignette */
+    vec2 v = uv * 2.0 - 1.0;
+    col *= 1.0 - length(v) * 0.38;
+
+    gl_FragColor = vec4(col, 1.0);
+}`);
+
+/* ── 3. Aurora ───────────────────────────────────────────────── */
+setup('c3', `precision highp float;
+uniform float u_t;
+uniform vec2  u_r;
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+float noise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i),             hash(i + vec2(1,0)), u.x),
+               mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), u.x), u.y);
+}
+
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.1 + vec2(1.7, 9.2); a *= 0.5; }
+    return v;
+}
+
+void main() {
+    vec2  uv  = gl_FragCoord.xy / u_r;
+    float asp = u_r.x / u_r.y;
+
+    float h = 0.28 + 0.015 * sin(uv.x * 2.5 * asp + u_t * 0.25);
+
+    vec3 col;
+    if (uv.y < h) {
+        /* ground */
+        float d = (h - uv.y) / h;
+        col = mix(vec3(0.04, 0.07, 0.10), vec3(0.008, 0.015, 0.03), d);
+        /* mountain silhouette */
+        float mh = 0.03 * sin(uv.x * 4.0 * asp + 1.5)
+                 + 0.02 * sin(uv.x * 9.0 * asp + 0.5)
+                 + 0.015* sin(uv.x * 17.0* asp + 3.0);
+        if (uv.y < h - 0.05 + mh) col = vec3(0.012, 0.018, 0.025);
+    } else {
+        float ay = uv.y - h;
+        float ax = uv.x * asp;
+
+        /* sky gradient */
+        col = mix(vec3(0.01, 0.04, 0.10), vec3(0.00, 0.01, 0.04), ay / (1.0 - h));
+
+        /* twinkling stars */
+        vec2  sp  = uv * vec2(asp, 1.0) * 100.0;
+        vec2  sc  = floor(sp), sf = fract(sp);
+        float sh  = hash(sc), sh2 = hash(sc + vec2(13.7, 47.3));
+        if (sh > 0.52) {
+            float tw = 0.5 + 0.5 * sin(u_t * (0.8 + sh2 * 2.5) + sh * 6.28);
+            col += sh2 * 0.8 * tw * smoothstep(0.18, 0.0, length(sf - 0.5)) * vec3(0.7, 0.85, 1.0);
+        }
+
+        /* aurora band 1: green */
+        float n1 = fbm(vec2(ax * 0.70 + u_t * 0.04, ay * 1.5));
+        float b1 = exp(-pow((ay - (0.22 + 0.12 * n1)) / 0.09, 2.0));
+        float a1 = clamp(0.5 + 0.5 * fbm(vec2(ax * 1.4 + u_t * 0.07, u_t * 0.02)), 0.0, 1.0);
+        col += b1 * a1 * 1.1 * vec3(0.08, 0.90, 0.45);
+
+        /* aurora band 2: cyan */
+        float n2 = fbm(vec2(ax * 0.55 - u_t * 0.035 + 5.0, ay * 1.2 + 2.0));
+        float b2 = exp(-pow((ay - (0.14 + 0.09 * n2)) / 0.06, 2.0));
+        float a2 = clamp(0.4 + 0.5 * fbm(vec2(ax * 1.1 - u_t * 0.05, u_t * 0.015 + 3.0)), 0.0, 1.0);
+        col += b2 * a2 * 0.85 * vec3(0.0, 0.75, 0.95);
+
+        /* aurora band 3: violet */
+        float n3 = fbm(vec2(ax * 0.65 + u_t * 0.03 + 10.0, ay * 1.8 + 5.0));
+        float b3 = exp(-pow((ay - (0.32 + 0.14 * n3)) / 0.11, 2.0));
+        float a3 = clamp(0.35 + 0.45 * fbm(vec2(ax * 0.9 + u_t * 0.035, u_t * 0.012 + 7.0)), 0.0, 1.0);
+        col += b3 * a3 * 0.90 * vec3(0.55, 0.08, 0.95);
+    }
+
+    /* horizon glow */
+    col += exp(-abs(uv.y - h) * 28.0) * 0.35 * vec3(0.10, 0.75, 0.55);
+
+    /* vignette */
+    vec2 v = uv * 2.0 - 1.0;
+    col *= 1.0 - length(v * vec2(0.7, 1.0)) * 0.32;
+
+    gl_FragColor = vec4(col, 1.0);
+}`);
+</script>
+</body>
+</html>

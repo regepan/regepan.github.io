@@ -96,7 +96,7 @@
 <header>
     <a href="../">← Back</a>
     <h1>WebGL Demos</h1>
-    <p class="subtitle">WebGL でできることを 3 つのデモで体験する</p>
+    <p class="subtitle">WebGL でできることを 6 つのデモで体験する</p>
 </header>
 
 <div class="grid">
@@ -142,6 +142,15 @@
             <div class="title">WebGL Cats</div>
             <div class="desc">SDF（符号付き距離関数）でフラグメントシェーダーだけに描く 3 匹の猫。まばたき・呼吸・しっぽのアニメーション付き。</div>
             <span class="tag">SDF · Fragment Shader</span>
+        </div>
+    </a>
+
+    <a href="./horizon/" class="card">
+        <div class="preview" id="p6"></div>
+        <div class="body">
+            <div class="title">Wavy Horizon</div>
+            <div class="desc">波打つ水平線を 3 種類のシェーダーで表現。夕陽の海・ネオングリッド・オーロラをフラグメントシェーダーだけで描く。</div>
+            <span class="tag">Sine Waves · fBm Noise</span>
         </div>
     </a>
 </div>
@@ -364,6 +373,37 @@ mini3D(document.getElementById('p2'));
 miniShader(document.getElementById('p3'));
 miniButton(document.getElementById('p4'));
 miniCats(document.getElementById('p5'));
+
+function miniHorizon(container) {
+    const c = document.createElement('canvas');
+    container.appendChild(c);
+    const gl = c.getContext('webgl');
+    c.width = container.clientWidth; c.height = container.clientHeight;
+    gl.viewport(0, 0, c.width, c.height);
+    const vs = `attribute vec2 a;void main(){gl_Position=vec4(a,0,1);}`;
+    const fs = `precision highp float;
+uniform float u_t;uniform vec2 u_r;
+void main(){
+    vec2 uv=gl_FragCoord.xy/u_r;float asp=u_r.x/u_r.y;
+    float w=0.030*sin(uv.x*5.0*asp+u_t*0.7)+0.018*sin(uv.x*9.0*asp-u_t*1.1+0.5)+0.010*sin(uv.x*15.0*asp+u_t*1.8+1.2)+0.014*sin(uv.x*3.5*asp+u_t*0.4+3.1);
+    float h=0.42+w;vec3 col;
+    if(uv.y>=h){float t=clamp((uv.y-h)/(1.0-h),0.,1.);vec3 s0=vec3(0.98,0.52,0.18);vec3 s1=vec3(0.55,0.18,0.52);vec3 s2=vec3(0.04,0.05,0.22);col=t<0.35?mix(s0,s1,t/0.35):mix(s1,s2,(t-0.35)/0.65);}
+    else{float d=clamp((h-uv.y)/h,0.,1.);col=mix(vec3(0.12,0.40,0.62),vec3(0.02,0.07,0.18),d*1.8);col=mix(col,vec3(0.98,0.52,0.18),exp(-d*9.0)*0.38);}
+    vec2 sp=vec2(0.38,h+0.15);float sd=length(uv-sp);col=mix(col,vec3(1.,0.97,0.75),smoothstep(0.048,0.030,sd));col+=exp(-sd*7.)*0.18*vec3(1.,0.65,0.25);
+    col+=exp(-abs(uv.y-h)*28.)*0.22*vec3(1.,0.58,0.25);col+=smoothstep(0.012,0.,abs(uv.y-h))*0.45*vec3(1.,0.88,0.72);
+    vec2 v=uv*2.-1.;col*=1.-dot(v,v)*0.28;gl_FragColor=vec4(col,1.);
+}`;
+    const mk=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;};
+    const pr=gl.createProgram();gl.attachShader(pr,mk(gl.VERTEX_SHADER,vs));gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);gl.useProgram(pr);
+    const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+    const al=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+    const tL=gl.getUniformLocation(pr,'u_t'),rL=gl.getUniformLocation(pr,'u_r');
+    gl.uniform2f(rL,c.width,c.height);
+    function draw(t){gl.uniform1f(tL,t/1000);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(draw);}
+    requestAnimationFrame(draw);
+}
+
+miniHorizon(document.getElementById('p6'));
 </script>
 </body>
 </html>
