@@ -9,7 +9,8 @@
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/cats)",
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/horizon)",
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/snake-game)",
-      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/action-game)"
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/action-game)",
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/tower-defense)"
     ],
     "additionalDirectories": [
       "/Users/ist/Projects/regepan.github.io",
