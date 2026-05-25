@@ -5,7 +5,8 @@
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/lighting)",
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/shader-art)",
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/bootstrap-buttons)",
-      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/button)"
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/button)",
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-demos/cats)"
     ],
     "additionalDirectories": [
       "/Users/ist/Projects/regepan.github.io",

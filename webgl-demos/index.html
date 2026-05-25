@@ -135,6 +135,15 @@
             <span class="tag">GLSL · Fragment Shader Only</span>
         </div>
     </a>
+
+    <a href="./cats/" class="card">
+        <div class="preview" id="p5"></div>
+        <div class="body">
+            <div class="title">WebGL Cats</div>
+            <div class="desc">SDF（符号付き距離関数）でフラグメントシェーダーだけに描く 3 匹の猫。まばたき・呼吸・しっぽのアニメーション付き。</div>
+            <span class="tag">SDF · Fragment Shader</span>
+        </div>
+    </a>
 </div>
 
 <script>
@@ -287,10 +296,74 @@ function miniButton(container) {
     requestAnimationFrame(draw);
 }
 
+function miniCats(container) {
+    const c = document.createElement('canvas');
+    container.appendChild(c);
+    const gl = c.getContext('webgl');
+    c.width = container.clientWidth; c.height = container.clientHeight;
+    gl.viewport(0, 0, c.width, c.height);
+    const vs = `attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}`;
+    const fs = `precision highp float;uniform float u_t;uniform vec2 u_r;
+    float fill(float d,float aa){return smoothstep(aa,-aa,d);}
+    float sdC(vec2 p,float r){return length(p)-r;}
+    float sdE(vec2 p,vec2 ab){return length(p/ab)-1.;}
+    float sdCap(vec2 p,vec2 a,vec2 b,float r){vec2 pa=p-a,ba=b-a;return length(pa-ba*clamp(dot(pa,ba)/dot(ba,ba),0.,1.))-r;}
+    float sdTri(vec2 p,vec2 a,vec2 b,vec2 c){vec2 e0=b-a,e1=c-b,e2=a-c,v0=p-a,v1=p-b,v2=p-c;vec2 q0=v0-e0*clamp(dot(v0,e0)/dot(e0,e0),0.,1.);vec2 q1=v1-e1*clamp(dot(v1,e1)/dot(e1,e1),0.,1.);vec2 q2=v2-e2*clamp(dot(v2,e2)/dot(e2,e2),0.,1.);float s=sign(e0.x*e2.y-e0.y*e2.x);vec2 d=min(min(vec2(dot(q0,q0),s*(v0.x*e0.y-v0.y*e0.x)),vec2(dot(q1,q1),s*(v1.x*e1.y-v1.y*e1.x))),vec2(dot(q2,q2),s*(v2.x*e2.y-v2.y*e2.x)));return -sqrt(d.x)*sign(d.y);}
+    vec3 cat(vec2 uv,vec2 o,vec3 bg,vec3 fc,vec3 ec,float t){
+        vec2 p=uv-o; if(abs(p.x)>.25||p.y>.32||p.y<-.17)return bg;
+        float aa=2./u_r.y;float br=sin(t*1.3)*.004;float tw=sin(t*2.1)*.028;float bl=smoothstep(.92,1.,abs(sin(t*.65+.5)));
+        float body=sdE(p-vec2(0.,-.03),vec2(.062,.085+br));float neck=sdCap(p,vec2(0.,.03),vec2(0.,.09),.029);float head=sdC(p-vec2(0.,.100),.073);
+        float eL=sdTri(p,vec2(-.071,.143),vec2(-.024,.224),vec2(.004,.155));float eR=sdTri(p,vec2(-.004,.155),vec2(.024,.224),vec2(.071,.143));
+        float pawL=sdE(p-vec2(-.034,-.117),vec2(.026,.017));float pawR=sdE(p-vec2(.034,-.117),vec2(.026,.017));
+        float ta=sdCap(p,vec2(.06,-.10),vec2(.12,-.07),.016);float tb=sdCap(p,vec2(.12,-.07),vec2(.16,-.01),.017);float tc=sdCap(p,vec2(.16,-.01),vec2(.14+tw,.05+tw*.7),.019);float tail=min(min(ta,tb),tc);
+        float sh=min(min(min(body,neck),min(head,eL)),min(min(eR,pawL),min(pawR,tail)));
+        float catF=fill(sh,aa);float headF=fill(head,aa);
+        float ieL=sdTri(p,vec2(-.058,.150),vec2(-.024,.208),vec2(.001,.158));float ieR2=sdTri(p,vec2(-.001,.158),vec2(.024,.208),vec2(.058,.150));float ie=min(ieL,ieR2);
+        float eyH=mix(.016,.0025,bl);float irH=mix(.012,.0018,bl);float puH=mix(.009,.0013,bl);
+        float eyes=min(sdE(p-vec2(-.030,.106),vec2(.018,eyH)),sdE(p-vec2(.030,.106),vec2(.018,eyH)));
+        float iris=min(sdE(p-vec2(-.030,.106),vec2(.013,irH)),sdE(p-vec2(.030,.106),vec2(.013,irH)));
+        float pup=min(sdE(p-vec2(-.030,.106),vec2(.005,puH)),sdE(p-vec2(.030,.106),vec2(.005,puH)));
+        float shine=min(sdC(p-vec2(-.025,.112),.004),sdC(p-vec2(.034,.112),.004));
+        float nose=sdTri(p,vec2(-.009,.067),vec2(.009,.067),vec2(0.,.057));
+        float wsk=min(min(sdCap(p,vec2(-.010,.063),vec2(-.082,.070),.0015),sdCap(p,vec2(-.010,.059),vec2(-.082,.049),.0015)),min(sdCap(p,vec2(.010,.063),vec2(.082,.070),.0015),sdCap(p,vec2(.010,.059),vec2(.082,.049),.0015)));
+        vec3 col=mix(bg,fc,catF);
+        col=mix(col,fc*.88+vec3(.22,.07,.09),fill(ie,aa)*headF);
+        col=mix(col,vec3(.92,.95,1.),fill(eyes,aa)*headF);
+        col=mix(col,ec,fill(iris,aa)*headF);
+        col=mix(col,vec3(.05,.04,.07),fill(pup,aa)*headF);
+        col=mix(col,vec3(1.),fill(shine,aa)*headF*(1.-bl));
+        col=mix(col,vec3(.95,.42,.52),fill(nose,aa)*headF);
+        col=mix(col,vec3(1.,.98,.93),fill(wsk,aa)*.85);
+        return col;
+    }
+    void main(){
+        vec2 uv=(gl_FragCoord.xy-u_r*.5)/u_r.y;
+        vec3 col=mix(vec3(.05,.04,.09),vec3(.11,.10,.17),uv.y*2.+.5);
+        float aa=2./u_r.y;
+        vec2 p1=vec2(-.28,0.),p2=vec2(0.,0.),p3=vec2(.28,0.);
+        col=mix(col,vec3(.03,.02,.06),clamp(fill(sdE(uv-p1-vec2(0.,-.127),vec2(.096,.014)),aa)+fill(sdE(uv-p2-vec2(0.,-.127),vec2(.096,.014)),aa)+fill(sdE(uv-p3-vec2(0.,-.127),vec2(.096,.014)),aa),0.,1.)*.5);
+        col=cat(uv,p1,col,vec3(.86,.52,.18),vec3(.22,.74,.28),u_t*.8);
+        col=cat(uv,p2,col,vec3(.58,.60,.64),vec3(.28,.60,.92),u_t*.8+1.5);
+        col=cat(uv,p3,col,vec3(.13,.12,.17),vec3(.80,.54,.10),u_t*.8+3.0);
+        float vg=1.-length(uv*vec2(.7,1.1))*.75;
+        col*=clamp(vg,0.,1.);
+        gl_FragColor=vec4(col,1.);
+    }`;
+    const mk=(t,s)=>{const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh;};
+    const pr=gl.createProgram();gl.attachShader(pr,mk(gl.VERTEX_SHADER,vs));gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);gl.useProgram(pr);
+    const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+    const al=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+    const uT=gl.getUniformLocation(pr,'u_t'),uR=gl.getUniformLocation(pr,'u_r');
+    gl.uniform2f(uR,c.width,c.height);
+    function draw(t){gl.uniform1f(uT,t/1000);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(draw);}
+    requestAnimationFrame(draw);
+}
+
 miniParticles(document.getElementById('p1'));
 mini3D(document.getElementById('p2'));
 miniShader(document.getElementById('p3'));
 miniButton(document.getElementById('p4'));
+miniCats(document.getElementById('p5'));
 </script>
 </body>
 </html>

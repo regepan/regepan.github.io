@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL Cats</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #080810; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        canvas { display: block; }
+        header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: linear-gradient(to bottom, rgba(8,8,16,.9), transparent);
+            pointer-events: none;
+        }
+        header a { color: #666; text-decoration: none; font-size: 13px; font-family: monospace; pointer-events: auto; }
+        header a:hover { color: #aaa; }
+        h1 { font-size: 17px; font-weight: 600; color: #ddd; }
+        .tag {
+            padding: 2px 9px;
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 20px;
+            font-size: 11px; color: #666; font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <a href="../">← Back</a>
+    <h1>WebGL Cats</h1>
+    <span class="tag">SDF · Fragment Shader</span>
+</header>
+<canvas id="c"></canvas>
+<script>
+const c = document.getElementById('c');
+const gl = c.getContext('webgl');
+
+function resize() {
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+    gl.viewport(0, 0, c.width, c.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const VS = `attribute vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }`;
+
+const FS = `
+precision highp float;
+uniform float u_t;
+uniform vec2  u_r;
+
+float fill(float d, float aa){ return smoothstep(aa,-aa,d); }
+float sdC(vec2 p, float r){ return length(p)-r; }
+float sdE(vec2 p, vec2 ab){ return length(p/ab)-1.; }
+float sdCap(vec2 p, vec2 a, vec2 b, float r){
+    vec2 pa=p-a, ba=b-a;
+    return length(pa-ba*clamp(dot(pa,ba)/dot(ba,ba),0.,1.))-r;
+}
+float sdTri(vec2 p, vec2 a, vec2 b, vec2 c){
+    vec2 e0=b-a,e1=c-b,e2=a-c,v0=p-a,v1=p-b,v2=p-c;
+    vec2 q0=v0-e0*clamp(dot(v0,e0)/dot(e0,e0),0.,1.);
+    vec2 q1=v1-e1*clamp(dot(v1,e1)/dot(e1,e1),0.,1.);
+    vec2 q2=v2-e2*clamp(dot(v2,e2)/dot(e2,e2),0.,1.);
+    float s=sign(e0.x*e2.y-e0.y*e2.x);
+    vec2 d=min(min(vec2(dot(q0,q0),s*(v0.x*e0.y-v0.y*e0.x)),
+                   vec2(dot(q1,q1),s*(v1.x*e1.y-v1.y*e1.x))),
+                   vec2(dot(q2,q2),s*(v2.x*e2.y-v2.y*e2.x)));
+    return -sqrt(d.x)*sign(d.y);
+}
+
+vec3 drawCat(vec2 uv, vec2 o, vec3 bg, vec3 fc, vec3 ec,
+             float hasStripes, float hasChest, float t) {
+    vec2 p = uv - o;
+    if (abs(p.x)>.25 || p.y>.32 || p.y<-.17) return bg;
+
+    float aa = 2./u_r.y;
+    float br  = sin(t*1.30)*0.004;    // breathing
+    float tw  = sin(t*2.10)*0.028;    // tail wag
+    float bl  = smoothstep(.92,1.,abs(sin(t*.65+.5))); // blink 0→1
+
+    // ── Body ──
+    float body = sdE(p-vec2(0.,-.03), vec2(.062,.085+br));
+    float neck = sdCap(p, vec2(0.,.03), vec2(0.,.09), .029);
+    float head = sdC(p-vec2(0.,.100), .073);
+    float eL   = sdTri(p, vec2(-.071,.143), vec2(-.024,.224), vec2(.004,.155));
+    float eR   = sdTri(p, vec2(-.004,.155), vec2(.024,.224), vec2(.071,.143));
+    float pawL = sdE(p-vec2(-.034,-.117), vec2(.026,.017));
+    float pawR = sdE(p-vec2(.034,-.117),  vec2(.026,.017));
+    float ta   = sdCap(p, vec2(.06,-.10), vec2(.12,-.07), .016);
+    float tb   = sdCap(p, vec2(.12,-.07), vec2(.16,-.01), .017);
+    float tc   = sdCap(p, vec2(.16,-.01), vec2(.14+tw,.05+tw*.7), .019);
+    float tail = min(min(ta,tb),tc);
+
+    float sh   = min(min(min(body,neck),min(head,eL)),
+                     min(min(eR,pawL),min(pawR,tail)));
+    float catF = fill(sh, aa);
+    float headF= fill(head, aa);
+    float bodyF= fill(body, aa);
+
+    // ── Features ──
+    float ieL  = sdTri(p, vec2(-.058,.150), vec2(-.024,.208), vec2(.001,.158));
+    float ieR2 = sdTri(p, vec2(-.001,.158), vec2(.024,.208), vec2(.058,.150));
+    float ie   = min(ieL, ieR2);
+
+    float eyH  = mix(.016,.0025,bl);
+    float irH  = mix(.012,.0018,bl);
+    float puH  = mix(.009,.0013,bl);
+    float eyL2 = sdE(p-vec2(-.030,.106), vec2(.018,eyH));
+    float eyR2 = sdE(p-vec2( .030,.106), vec2(.018,eyH));
+    float eyes = min(eyL2,eyR2);
+    float irL  = sdE(p-vec2(-.030,.106), vec2(.013,irH));
+    float irR  = sdE(p-vec2( .030,.106), vec2(.013,irH));
+    float iris = min(irL,irR);
+    float puL2 = sdE(p-vec2(-.030,.106), vec2(.005,puH));
+    float puR2 = sdE(p-vec2( .030,.106), vec2(.005,puH));
+    float pup  = min(puL2,puR2);
+    float shL  = sdC(p-vec2(-.025,.112), .004);
+    float shR  = sdC(p-vec2( .034,.112), .004);
+    float shine= min(shL,shR);
+
+    float nose = sdTri(p, vec2(-.009,.067), vec2(.009,.067), vec2(0.,.057));
+    float mthL = sdCap(p, vec2(-.001,.057), vec2(-.017,.047), .0025);
+    float mthR = sdCap(p, vec2( .001,.057), vec2( .017,.047), .0025);
+    float mth  = min(mthL,mthR);
+
+    float wL1  = sdCap(p, vec2(-.010,.063), vec2(-.082,.070), .0015);
+    float wL2  = sdCap(p, vec2(-.010,.059), vec2(-.082,.049), .0015);
+    float wR1  = sdCap(p, vec2( .010,.063), vec2( .082,.070), .0015);
+    float wR2  = sdCap(p, vec2( .010,.059), vec2( .082,.049), .0015);
+    float wsk  = min(min(wL1,wL2),min(wR1,wR2));
+
+    // ── Composite ──
+    vec3 col = mix(bg, fc, catF);
+
+    // Tabby stripes
+    float stripeV = sin(p.y*26.+sin(p.x*9.)*1.6)*.5+.5;
+    float stripeF = smoothstep(.32,.68,stripeV);
+    col = mix(col, fc*.58+vec3(.04,.02,0.), stripeF*catF*hasStripes*.55);
+
+    // White chest
+    float chestA = fill(sdE(p-vec2(0.,-.01), vec2(.034,.050)),aa)*bodyF;
+    col = mix(col, vec3(.90,.88,.85), chestA*hasChest);
+
+    // Inner ear
+    col = mix(col, fc*.88+vec3(.22,.07,.09), fill(ie,aa)*headF);
+    // Eye sclera
+    col = mix(col, vec3(.92,.95,1.), fill(eyes,aa)*headF);
+    // Iris
+    col = mix(col, ec, fill(iris,aa)*headF);
+    // Pupil
+    col = mix(col, vec3(.05,.04,.07), fill(pup,aa)*headF);
+    // Shine
+    col = mix(col, vec3(1.), fill(shine,aa)*headF*(1.-bl));
+    // Nose
+    col = mix(col, vec3(.95,.42,.52), fill(nose,aa)*headF);
+    // Mouth
+    col = mix(col, fc*.30, fill(mth,aa)*headF);
+    // Whiskers
+    col = mix(col, vec3(1.,.98,.93), fill(wsk,aa)*.85);
+
+    return col;
+}
+
+void main(){
+    vec2 uv = (gl_FragCoord.xy - u_r*.5)/u_r.y;
+
+    // Background gradient
+    vec3 col = mix(vec3(.05,.04,.09), vec3(.11,.10,.17), uv.y*2.+.5);
+
+    // Moon
+    float moon = sdC(uv - vec2(.38,.30), .048);
+    col = mix(col, vec3(.95,.92,.80), fill(moon, 2./u_r.y));
+    col = mix(col, mix(vec3(.05,.04,.09),vec3(.11,.10,.17),.9),
+              fill(sdC(uv-vec2(.40,.33),.048), 2./u_r.y));
+
+    // Stars
+    for(int i=0;i<12;i++){
+        float fi = float(i);
+        vec2 sp = vec2(fract(fi*.137+.05)*2.-1., fract(fi*.311+.1)*.5+.1);
+        float star = sdC(uv-sp, .003);
+        float tw2 = sin(u_t*.9+fi*1.4)*.5+.5;
+        col = mix(col, vec3(1.), fill(star,2./u_r.y)*(.4+.5*tw2));
+    }
+
+    // Floor line
+    col = mix(col, vec3(.07,.06,.11), fill(uv.y+.133, 2./u_r.y)*.75);
+
+    float aa = 2./u_r.y;
+    vec2 p1=vec2(-.38,0.), p2=vec2(.0,0.), p3=vec2(.38,0.);
+
+    // Shadows
+    float sh1 = fill(sdE(uv-p1-vec2(0.,-.127), vec2(.096,.014)), aa);
+    float sh2 = fill(sdE(uv-p2-vec2(0.,-.127), vec2(.096,.014)), aa);
+    float sh3 = fill(sdE(uv-p3-vec2(0.,-.127), vec2(.096,.014)), aa);
+    col = mix(col, vec3(.03,.02,.06), clamp(sh1+sh2+sh3,0.,1.)*.5);
+
+    float t = u_t;
+    // Orange tabby  (stripes=1, chest=0)
+    col = drawCat(uv, p1, col, vec3(.86,.52,.18), vec3(.22,.74,.28), 1., 0., t*.8);
+    // Grey          (stripes=0, chest=0)
+    col = drawCat(uv, p2, col, vec3(.58,.60,.64), vec3(.28,.60,.92), 0., 0., t*.8+1.5);
+    // Black         (stripes=0, chest=1)
+    col = drawCat(uv, p3, col, vec3(.13,.12,.17), vec3(.80,.54,.10), 0., 1., t*.8+3.0);
+
+    // Vignette
+    float vg = 1. - length(uv*vec2(.7,1.1))*.75;
+    col *= clamp(vg, 0., 1.);
+
+    gl_FragColor = vec4(col, 1.);
+}`;
+
+function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+        console.error(gl.getShaderInfoLog(s));
+    return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+    console.error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+const aLoc = gl.getAttribLocation(prog, 'a');
+gl.enableVertexAttribArray(aLoc);
+gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0);
+
+const uT = gl.getUniformLocation(prog, 'u_t');
+const uR = gl.getUniformLocation(prog, 'u_r');
+
+function draw(ms) {
+    gl.uniform1f(uT, ms / 1000);
+    gl.uniform2f(uR, c.width, c.height);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
