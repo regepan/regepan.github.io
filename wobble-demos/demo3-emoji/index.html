@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プルプル絵文字 - Wobble Demo 3</title>
+<style>
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f9a825 0%, #e64a19 60%, #ad1457 100%);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+#info {
+  position: fixed;
+  top: 18px; left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.75);
+  font: 14px/1 'Segoe UI', sans-serif;
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+#back {
+  position: fixed;
+  bottom: 18px; left: 22px;
+  color: rgba(255,255,255,0.6);
+  font: 13px/1 sans-serif;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+#back:hover { color: rgba(255,255,255,0.95); }
+.emoji-bubble {
+  position: fixed;
+  cursor: grab;
+  will-change: transform;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transform-origin: center;
+}
+.emoji-bubble:active { cursor: grabbing; }
+</style>
+</head>
+<body>
+<div id="info">マウスで掴んでぐりぐり動かしてみよう！</div>
+<a id="back" href="../">← Back</a>
+
+<script>
+const ITEMS = [
+  { emoji: '🦊', bg: 'rgba(255,140,0,0.88)',   size: 92, fx: 0.17, fy: 0.28 },
+  { emoji: '🐸', bg: 'rgba(67,160,71,0.88)',   size: 84, fx: 0.44, fy: 0.20 },
+  { emoji: '🌻', bg: 'rgba(251,192,45,0.88)',  size: 88, fx: 0.72, fy: 0.33 },
+  { emoji: '🦑', bg: 'rgba(123,31,162,0.88)',  size: 90, fx: 0.25, fy: 0.65 },
+  { emoji: '🍄', bg: 'rgba(198,40,40,0.88)',   size: 82, fx: 0.60, fy: 0.68 },
+  { emoji: '🌸', bg: 'rgba(216,27,96,0.88)',   size: 86, fx: 0.12, fy: 0.72 },
+  { emoji: '🐙', bg: 'rgba(21,101,192,0.88)',  size: 88, fx: 0.50, fy: 0.55 },
+];
+
+let active = null;
+
+class EmojiItem {
+  constructor(cfg) {
+    this.x = cfg.fx * window.innerWidth;
+    this.y = cfg.fy * window.innerHeight;
+    this.prevX = this.x;
+    this.prevY = this.y;
+    this.isDrag = false;
+    this.offX = 0;
+    this.offY = 0;
+    // skew state (degrees)
+    this.skewX = 0;
+    this.skewY = 0;
+    this.skewXVel = 0;
+    this.skewYVel = 0;
+    // scale state
+    this.scale = 1;
+    this.scaleVel = 0;
+    this.lastVx = 0;
+    this.lastVy = 0;
+    this.cfg = cfg;
+
+    const el = document.createElement('div');
+    el.className = 'emoji-bubble';
+    const half = cfg.size / 2;
+    el.style.cssText = `
+      width:${cfg.size}px; height:${cfg.size}px;
+      margin-left:${-half}px; margin-top:${-half}px;
+      background: ${cfg.bg};
+      font-size:${(cfg.size * 0.54).toFixed(0)}px;
+      line-height: 1;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);
+      z-index: 1;
+    `;
+    el.textContent = cfg.emoji;
+    document.body.appendChild(el);
+
+    el.addEventListener('mousedown', e => { e.preventDefault(); this.grab(e.clientX, e.clientY); });
+    el.addEventListener('touchstart', e => { e.preventDefault(); this.grab(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+
+    this.el = el;
+  }
+
+  grab(mx, my) {
+    this.isDrag = true;
+    this.offX = mx - this.x;
+    this.offY = my - this.y;
+    this.skewXVel = 0;
+    this.skewYVel = 0;
+    this.scaleVel = 0;
+    this.el.style.zIndex = Date.now();
+    this.el.style.boxShadow = '0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.3)';
+    active = this;
+  }
+
+  move(mx, my) {
+    if (!this.isDrag) return;
+    this.x = mx - this.offX;
+    this.y = my - this.offY;
+  }
+
+  release() {
+    this.isDrag = false;
+    const speed = Math.sqrt(this.lastVx ** 2 + this.lastVy ** 2);
+    // Launch spring from last drag velocity
+    this.skewXVel = this.lastVx * 1.1;
+    this.skewYVel = this.lastVy * 1.1;
+    this.scaleVel = Math.min(speed * 0.022, 0.35);
+    this.el.style.boxShadow = '0 6px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)';
+    active = null;
+  }
+
+  update() {
+    if (this.isDrag) {
+      const vx = this.x - this.prevX;
+      const vy = this.y - this.prevY;
+      this.prevX = this.x;
+      this.prevY = this.y;
+      this.lastVx = vx;
+      this.lastVy = vy;
+
+      const speed = Math.sqrt(vx * vx + vy * vy);
+
+      // Skew: lean in direction of drag (like a body lagging behind)
+      const targetSkewX = vx * 0.90;
+      const targetSkewY = vy * 0.90;
+      this.skewX += (targetSkewX - this.skewX) * 0.28;
+      this.skewY += (targetSkewY - this.skewY) * 0.28;
+
+      // Scale: slightly swell when moving fast
+      const targetScale = 1 + Math.min(speed * 0.020, 0.28);
+      this.scale += (targetScale - this.scale) * 0.26;
+      this.scaleVel = 0;
+    } else {
+      // Damped spring back to neutral on all axes
+      this.skewXVel -= this.skewX * 0.12;
+      this.skewXVel *= 0.72;
+      this.skewX += this.skewXVel;
+
+      this.skewYVel -= this.skewY * 0.12;
+      this.skewYVel *= 0.72;
+      this.skewY += this.skewYVel;
+
+      this.scaleVel -= (this.scale - 1) * 0.16;
+      this.scaleVel *= 0.72;
+      this.scale += this.scaleVel;
+
+      this.prevX = this.x;
+      this.prevY = this.y;
+    }
+
+    const sx = Math.max(-28, Math.min(28, this.skewX));
+    const sy = Math.max(-28, Math.min(28, this.skewY));
+    const sc = Math.max(0.5, Math.min(1.7, this.scale));
+
+    this.el.style.left = this.x + 'px';
+    this.el.style.top  = this.y + 'px';
+    this.el.style.transform = `scale(${sc.toFixed(4)}) skewX(${sx.toFixed(3)}deg) skewY(${sy.toFixed(3)}deg)`;
+  }
+}
+
+const items = ITEMS.map(cfg => new EmojiItem(cfg));
+
+document.addEventListener('mousemove', e => { if (active) active.move(e.clientX, e.clientY); });
+document.addEventListener('mouseup',   () => { if (active) active.release(); });
+document.addEventListener('touchmove', e => { e.preventDefault(); if (active) active.move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+document.addEventListener('touchend',  () => { if (active) active.release(); });
+
+(function loop() {
+  items.forEach(i => i.update());
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wobble Demos</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f4f4f8;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.subtitle {
+  color: #888;
+  font-size: 1rem;
+  margin-bottom: 48px;
+  letter-spacing: 0.02em;
+}
+.cards {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 36px 28px;
+  width: 200px;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.13);
+}
+.card .icon { font-size: 3.2rem; margin-bottom: 14px; line-height: 1; }
+.card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+.card p { font-size: 0.8rem; color: #999; line-height: 1.4; }
+.badge {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.back {
+  margin-top: 48px;
+  color: #aaa;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+.back:hover { color: #555; }
+</style>
+</head>
+<body>
+  <h1>Wobble Demos 🌊</h1>
+  <p class="subtitle">マウスで掴んでぐりぐりしてみよう！</p>
+
+  <div class="cards">
+    <a href="./demo1-jelly/" class="card">
+      <div class="icon">🫧</div>
+      <h2>ゼリーブロブ</h2>
+      <p>動く方向に伸び縮みするぷにぷにブロブ</p>
+      <span class="badge" style="background:#ff6b6b22;color:#cc3300;">スカッシュ＆ストレッチ</span>
+    </a>
+    <a href="./demo2-cards/" class="card">
+      <div class="icon">🃏</div>
+      <h2>フラフラカード</h2>
+      <p>速さに応じて傾き、ゆれるカードたち</p>
+      <span class="badge" style="background:#6666ff22;color:#3333aa;">ローテーション</span>
+    </a>
+    <a href="./demo3-emoji/" class="card">
+      <div class="icon">🦊</div>
+      <h2>プルプル絵文字</h2>
+      <p>なびいて膨らむプルプルな絵文字たち</p>
+      <span class="badge" style="background:#ff990022;color:#994400;">スキュー＆スケール</span>
+    </a>
+  </div>
+
+  <a href="../" class="back">← Back to Home</a>
+</body>
+</html>

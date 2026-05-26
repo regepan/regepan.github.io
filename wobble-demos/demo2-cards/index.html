@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>フラフラカード - Wobble Demo 2</title>
+<style>
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+#info {
+  position: fixed;
+  top: 18px; left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.5);
+  font: 14px/1 'Segoe UI', sans-serif;
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+#back {
+  position: fixed;
+  bottom: 18px; left: 22px;
+  color: rgba(255,255,255,0.4);
+  font: 13px/1 sans-serif;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+#back:hover { color: rgba(255,255,255,0.85); }
+.card {
+  position: fixed;
+  cursor: grab;
+  will-change: transform;
+}
+.card:active { cursor: grabbing; }
+.card-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Segoe UI', sans-serif;
+  transition: box-shadow 0.2s;
+}
+.card-icon { font-size: 3.2rem; margin-bottom: 10px; line-height: 1; }
+.card-label { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+.card-sub { font-size: 0.75rem; opacity: 0.6; }
+</style>
+</head>
+<body>
+<div id="info">マウスで掴んでぐりぐり動かしてみよう！</div>
+<a id="back" href="../">← Back</a>
+
+<script>
+const CARDS = [
+  { icon: '🍕', label: 'ピザ',       sub: 'めちゃうま',     bg: '#fff9f0', fg: '#6b3a00', accent: '#ff6b35', fx: 0.18, fy: 0.30 },
+  { icon: '🎸', label: 'ギター',     sub: 'かきならそう',   bg: '#f0fff4', fg: '#1a4731', accent: '#38d96a', fx: 0.43, fy: 0.20 },
+  { icon: '🌈', label: 'レインボー', sub: '七色の輝き',     bg: '#f5f0ff', fg: '#3d1a6b', accent: '#9b5cf6', fx: 0.70, fy: 0.33 },
+  { icon: '🚀', label: 'ロケット',   sub: '宇宙へ出発！',   bg: '#f0f8ff', fg: '#003366', accent: '#3a9cf5', fx: 0.28, fy: 0.65 },
+  { icon: '🦋', label: 'バタフライ', sub: 'ひらひら飛ぶ',   bg: '#fff0fb', fg: '#5c003a', accent: '#f55cb3', fx: 0.60, fy: 0.68 },
+];
+
+const W = 148, H = 188;
+let active = null;
+
+class Card {
+  constructor(cfg) {
+    this.x = cfg.fx * window.innerWidth;
+    this.y = cfg.fy * window.innerHeight;
+    this.prevX = this.x;
+    this.prevY = this.y;
+    this.isDrag = false;
+    this.offX = 0;
+    this.offY = 0;
+    this.wobble = 0;
+    this.wobbleVel = 0;
+    this.lastVx = 0;
+    this.cfg = cfg;
+
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.style.cssText = `
+      width:${W}px; height:${H}px;
+      margin-left:${-W / 2}px; margin-top:${-H / 2}px;
+      z-index:1;
+    `;
+
+    const inner = document.createElement('div');
+    inner.className = 'card-inner';
+    inner.style.cssText = `
+      background: ${cfg.bg};
+      color: ${cfg.fg};
+      box-shadow:
+        0 8px 32px rgba(0,0,0,0.35),
+        0 0 0 1px rgba(255,255,255,0.08),
+        inset 0 1px 0 rgba(255,255,255,0.7);
+    `;
+    inner.innerHTML = `
+      <div class="card-icon">${cfg.icon}</div>
+      <div class="card-label">${cfg.label}</div>
+      <div class="card-sub">${cfg.sub}</div>
+    `;
+
+    el.appendChild(inner);
+    document.body.appendChild(el);
+
+    el.addEventListener('mousedown', e => { e.preventDefault(); this.grab(e.clientX, e.clientY); });
+    el.addEventListener('touchstart', e => { e.preventDefault(); this.grab(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+
+    this.el = el;
+    this.inner = inner;
+    this.cfg = cfg;
+  }
+
+  grab(mx, my) {
+    this.isDrag = true;
+    this.offX = mx - this.x;
+    this.offY = my - this.y;
+    this.wobbleVel = 0;
+    this.el.style.zIndex = Date.now();
+    this.inner.style.boxShadow = `
+      0 16px 48px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(255,255,255,0.12),
+      0 0 30px ${this.cfg.accent}44,
+      inset 0 1px 0 rgba(255,255,255,0.7)
+    `;
+    active = this;
+  }
+
+  move(mx, my) {
+    if (!this.isDrag) return;
+    this.x = mx - this.offX;
+    this.y = my - this.offY;
+  }
+
+  release() {
+    this.isDrag = false;
+    // Kick off oscillation from horizontal drag velocity
+    this.wobbleVel = this.lastVx * 0.9;
+    this.inner.style.boxShadow = `
+      0 8px 32px rgba(0,0,0,0.35),
+      0 0 0 1px rgba(255,255,255,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.7)
+    `;
+    active = null;
+  }
+
+  update() {
+    if (this.isDrag) {
+      const vx = this.x - this.prevX;
+      this.prevX = this.x;
+      this.prevY = this.y;
+      this.lastVx = vx;
+
+      // Tilt card toward drag direction
+      const targetWobble = vx * 1.4;
+      this.wobble += (targetWobble - this.wobble) * 0.20;
+    } else {
+      // Damped spring oscillation
+      this.wobbleVel -= this.wobble * 0.10;
+      this.wobbleVel *= 0.82;
+      this.wobble += this.wobbleVel;
+      this.prevX = this.x;
+      this.prevY = this.y;
+    }
+
+    const rot  = Math.max(-32, Math.min(32, this.wobble));
+    const rotY = rot * -0.35; // subtle 3-D lean
+
+    this.el.style.left = this.x + 'px';
+    this.el.style.top  = this.y + 'px';
+    this.el.style.transform = `perspective(700px) rotateZ(${rot.toFixed(3)}deg) rotateY(${rotY.toFixed(3)}deg)`;
+  }
+}
+
+const cards = CARDS.map(cfg => new Card(cfg));
+
+document.addEventListener('mousemove', e => { if (active) active.move(e.clientX, e.clientY); });
+document.addEventListener('mouseup',   () => { if (active) active.release(); });
+document.addEventListener('touchmove', e => { e.preventDefault(); if (active) active.move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+document.addEventListener('touchend',  () => { if (active) active.release(); });
+
+(function loop() {
+  cards.forEach(c => c.update());
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

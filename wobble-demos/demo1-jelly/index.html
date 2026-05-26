@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ゼリーブロブ - Wobble Demo 1</title>
+<style>
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0f0e17;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+#info {
+  position: fixed;
+  top: 18px; left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.4);
+  font: 14px/1 'Segoe UI', sans-serif;
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+#back {
+  position: fixed;
+  bottom: 18px; left: 22px;
+  color: rgba(255,255,255,0.35);
+  font: 13px/1 sans-serif;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+#back:hover { color: rgba(255,255,255,0.8); }
+.blob {
+  position: fixed;
+  cursor: grab;
+  will-change: transform;
+}
+.blob:active { cursor: grabbing; }
+.blob-shape {
+  width: 100%;
+  height: 100%;
+  border-radius: 62% 38% 68% 32% / 44% 56% 44% 56%;
+}
+</style>
+</head>
+<body>
+<div id="info">マウスで掴んでぐりぐり動かしてみよう！</div>
+<a id="back" href="../">← Back</a>
+
+<script>
+const BLOBS = [
+  { color: '#ff6b6b', glow: '#ff6b6b', size: 120, fx: 0.18, fy: 0.35 },
+  { color: '#4ecdc4', glow: '#4ecdc4', size: 108, fx: 0.45, fy: 0.25 },
+  { color: '#ffe66d', glow: '#ffe66d', size: 96,  fx: 0.75, fy: 0.4  },
+  { color: '#a8e6cf', glow: '#a8e6cf', size: 112, fx: 0.30, fy: 0.68 },
+  { color: '#ff8b94', glow: '#ff8b94', size: 90,  fx: 0.64, fy: 0.70 },
+  { color: '#c9b1ff', glow: '#c9b1ff', size: 100, fx: 0.13, fy: 0.72 },
+];
+
+let active = null;
+
+class Blob {
+  constructor(cfg) {
+    this.x = cfg.fx * window.innerWidth;
+    this.y = cfg.fy * window.innerHeight;
+    this.prevX = this.x;
+    this.prevY = this.y;
+    this.size = cfg.size;
+    this.stretch = 0;
+    this.stretchVel = 0;
+    this.angle = 0;
+    this.isDrag = false;
+    this.offX = 0;
+    this.offY = 0;
+    this.lastVx = 0;
+    this.lastVy = 0;
+    this.cfg = cfg;
+
+    const el = document.createElement('div');
+    el.className = 'blob';
+    el.style.cssText = `
+      width:${cfg.size}px; height:${cfg.size}px;
+      margin-left:${-cfg.size / 2}px; margin-top:${-cfg.size / 2}px;
+      z-index:1;
+    `;
+
+    const shape = document.createElement('div');
+    shape.className = 'blob-shape';
+    shape.style.background = `radial-gradient(circle at 32% 32%, ${cfg.color}ff, ${cfg.color}cc)`;
+    shape.style.boxShadow = `
+      inset 0 0 18px rgba(255,255,255,0.25),
+      0 0 28px ${cfg.glow}55,
+      0 0 60px ${cfg.glow}28
+    `;
+    el.appendChild(shape);
+    document.body.appendChild(el);
+
+    el.addEventListener('mousedown', e => { e.preventDefault(); this.grab(e.clientX, e.clientY); });
+    el.addEventListener('touchstart', e => { e.preventDefault(); this.grab(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+
+    this.el = el;
+    this.shape = shape;
+  }
+
+  grab(mx, my) {
+    this.isDrag = true;
+    this.offX = mx - this.x;
+    this.offY = my - this.y;
+    this.stretchVel = 0;
+    this.el.style.zIndex = Date.now();
+    this.shape.style.boxShadow = `
+      inset 0 0 22px rgba(255,255,255,0.35),
+      0 0 50px ${this.cfg.glow}99,
+      0 0 100px ${this.cfg.glow}44
+    `;
+    active = this;
+  }
+
+  move(mx, my) {
+    if (!this.isDrag) return;
+    this.x = mx - this.offX;
+    this.y = my - this.offY;
+  }
+
+  release() {
+    this.isDrag = false;
+    const speed = Math.sqrt(this.lastVx ** 2 + this.lastVy ** 2);
+    this.stretchVel = Math.min(speed * 0.05, 0.65);
+    this.shape.style.boxShadow = `
+      inset 0 0 18px rgba(255,255,255,0.25),
+      0 0 28px ${this.cfg.glow}55,
+      0 0 60px ${this.cfg.glow}28
+    `;
+    active = null;
+  }
+
+  update() {
+    if (this.isDrag) {
+      const vx = this.x - this.prevX;
+      const vy = this.y - this.prevY;
+      this.prevX = this.x;
+      this.prevY = this.y;
+      this.lastVx = vx;
+      this.lastVy = vy;
+
+      const speed = Math.sqrt(vx * vx + vy * vy);
+      const targetStretch = Math.min(speed * 0.028, 0.88);
+      this.stretch += (targetStretch - this.stretch) * 0.22;
+
+      if (speed > 0.4) {
+        const ta = Math.atan2(vy, vx);
+        let diff = ta - this.angle;
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        this.angle += diff * 0.35;
+      }
+    } else {
+      // Damped spring: oscillate stretch back to 0
+      this.stretchVel -= this.stretch * 0.13;
+      this.stretchVel *= 0.70;
+      this.stretch += this.stretchVel;
+      this.prevX = this.x;
+      this.prevY = this.y;
+    }
+
+    const s = Math.max(-0.55, Math.min(0.90, this.stretch));
+    const sx = 1 + s;
+    const sy = 1 / Math.max(0.18, 1 + s * 0.82);
+    const a = this.angle * 180 / Math.PI;
+
+    this.el.style.left = this.x + 'px';
+    this.el.style.top  = this.y + 'px';
+    // Rotate to velocity direction, stretch, then rotate back
+    this.el.style.transform = `rotate(${a.toFixed(3)}deg) scale(${sx.toFixed(4)},${sy.toFixed(4)}) rotate(${(-a).toFixed(3)}deg)`;
+  }
+}
+
+const blobs = BLOBS.map(cfg => new Blob(cfg));
+
+document.addEventListener('mousemove', e => { if (active) active.move(e.clientX, e.clientY); });
+document.addEventListener('mouseup',   () => { if (active) active.release(); });
+document.addEventListener('touchmove', e => { e.preventDefault(); if (active) active.move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+document.addEventListener('touchend',  () => { if (active) active.release(); });
+
+(function loop() {
+  blobs.forEach(b => b.update());
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
