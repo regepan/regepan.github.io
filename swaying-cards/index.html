@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swaying Card Animations</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  padding: 60px 24px 80px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.95rem;
+  margin-bottom: 64px;
+}
+
+/* ─── Section ─────────────────────────────────────── */
+.section {
+  max-width: 860px;
+  margin: 0 auto 80px;
+}
+
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.section-desc {
+  font-size: 0.88rem;
+  color: #888;
+  margin-bottom: 40px;
+  line-height: 1.6;
+}
+
+.stage {
+  background: #111827;
+  border-radius: 20px;
+  padding: 60px 40px;
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  min-height: 260px;
+}
+
+/* ─── Code block ──────────────────────────────────── */
+details {
+  margin-top: 20px;
+}
+summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #555;
+  user-select: none;
+  padding: 6px 0;
+}
+summary:hover { color: #aaa; }
+pre {
+  background: #0d1117;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+}
+.kw  { color: #ff7b72; }
+.prop{ color: #79c0ff; }
+.val { color: #a5d6ff; }
+.str { color: #a8ff78; }
+.cm  { color: #8b949e; font-style: italic; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DEMO 1 – Pendulum Hang
+   カード上部を軸にして左右に振れる吊り下げアニメーション
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.hang-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.hang-string {
+  width: 2px;
+  height: 36px;
+  background: linear-gradient(to bottom, #555, #333);
+  border-radius: 1px;
+}
+
+.hang-card {
+  width: 140px;
+  padding: 24px 18px;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  transform-origin: top center;
+  animation: pendulum 3s ease-in-out infinite;
+  cursor: pointer;
+  transition: animation-play-state 0.1s;
+}
+.hang-card:hover {
+  animation-play-state: paused;
+}
+
+.hang-card .icon { font-size: 2.4rem; margin-bottom: 10px; display: block; }
+.hang-card .title { font-size: 0.82rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.hang-card .sub   { font-size: 0.7rem; color: rgba(255,255,255,0.6); }
+
+.hang-a { background: linear-gradient(135deg, #6366f1, #8b5cf6); animation-delay: 0s; }
+.hang-b { background: linear-gradient(135deg, #ec4899, #f43f5e); animation-delay: -1s; }
+.hang-c { background: linear-gradient(135deg, #0ea5e9, #06b6d4); animation-delay: -2s; }
+
+@keyframes pendulum {
+  0%   { transform: rotate(-10deg); }
+  50%  { transform: rotate( 10deg); }
+  100% { transform: rotate(-10deg); }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DEMO 2 – Floating Drift
+   海面に浮かぶように上下しながらゆらゆら回転
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.float-card {
+  width: 160px;
+  padding: 28px 20px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+  animation: floatDrift 4s ease-in-out infinite;
+  cursor: pointer;
+}
+.float-card:hover { animation-play-state: paused; }
+
+.float-card .icon  { font-size: 2.6rem; margin-bottom: 12px; display: block; }
+.float-card .title { font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.float-card .sub   { font-size: 0.72rem; color: rgba(255,255,255,0.55); line-height: 1.4; }
+
+.float-a { background: linear-gradient(160deg, #134e4a, #0f766e); animation-delay: 0s; }
+.float-b { background: linear-gradient(160deg, #1e3a5f, #1d4ed8); animation-delay: -1.3s; }
+.float-c { background: linear-gradient(160deg, #4a1942, #9333ea); animation-delay: -2.6s; }
+
+@keyframes floatDrift {
+  0%   { transform: translateY(0px)   rotate(-3deg); }
+  25%  { transform: translateY(-14px) rotate( 0deg); }
+  50%  { transform: translateY(0px)   rotate( 3deg); }
+  75%  { transform: translateY(-14px) rotate( 0deg); }
+  100% { transform: translateY(0px)   rotate(-3deg); }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DEMO 3 – Wind Sway (3D perspective)
+   風になびくような 3D 傾きアニメーション
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.wind-stage {
+  perspective: 700px;
+}
+
+.wind-card {
+  width: 150px;
+  padding: 28px 18px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  animation: windSway 2.8s ease-in-out infinite;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  position: relative;
+}
+.wind-card:hover { animation-play-state: paused; }
+
+.wind-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.wind-card .icon  { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+.wind-card .title { font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.wind-card .sub   { font-size: 0.72rem; color: rgba(255,255,255,0.55); }
+
+.wind-a { background: linear-gradient(150deg, #78350f, #d97706); animation-delay: 0s; }
+.wind-b { background: linear-gradient(150deg, #064e3b, #10b981); animation-delay: -0.93s; }
+.wind-c { background: linear-gradient(150deg, #1e1b4b, #7c3aed); animation-delay: -1.86s; }
+
+@keyframes windSway {
+  0%   { transform: rotateY(-18deg) rotateZ(-4deg) translateX(-4px); }
+  50%  { transform: rotateY( 18deg) rotateZ( 4deg) translateX( 4px); }
+  100% { transform: rotateY(-18deg) rotateZ(-4deg) translateX(-4px); }
+}
+
+/* ─── Back link ───────────────────────────────────── */
+.back {
+  display: block;
+  text-align: center;
+  color: #555;
+  text-decoration: none;
+  font-size: 0.88rem;
+  margin-top: 20px;
+  transition: color 0.2s;
+}
+.back:hover { color: #aaa; }
+</style>
+</head>
+<body>
+
+<h1>Swaying Card Animations</h1>
+<p class="page-subtitle">CSS アニメーションだけで作る「ゆれるカード」3パターン</p>
+
+<!-- ════════════════════════════════════════════════
+     DEMO 1 – Pendulum Hang
+════════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">Demo 01</p>
+  <h2 class="section-title">🪢 Pendulum Hang — 吊り下げ振り子</h2>
+  <p class="section-desc">
+    <code>transform-origin: top center</code> を使って上端を軸に左右へ振り子のように揺れます。<br>
+    各カードに異なる <code>animation-delay</code> を与えてランダム感を出しています。ホバーで一時停止。
+  </p>
+  <div class="stage">
+    <div class="hang-wrap">
+      <div class="hang-string"></div>
+      <div class="hang-card hang-a">
+        <span class="icon">🔮</span>
+        <span class="title">Crystal</span>
+        <span class="sub">Magic item</span>
+      </div>
+    </div>
+    <div class="hang-wrap">
+      <div class="hang-string"></div>
+      <div class="hang-card hang-b">
+        <span class="icon">🌸</span>
+        <span class="title">Blossom</span>
+        <span class="sub">Spring vibes</span>
+      </div>
+    </div>
+    <div class="hang-wrap">
+      <div class="hang-string"></div>
+      <div class="hang-card hang-c">
+        <span class="icon">🌊</span>
+        <span class="title">Ocean</span>
+        <span class="sub">Deep blue</span>
+      </div>
+    </div>
+  </div>
+
+  <details>
+    <summary>CSS を見る</summary>
+    <pre><span class="cm">/* 上端を軸に振り子運動 */</span>
+<span class="prop">.hang-card</span> {
+  <span class="prop">transform-origin</span>: <span class="val">top center</span>;
+  <span class="prop">animation</span>: <span class="val">pendulum 3s ease-in-out infinite</span>;
+}
+<span class="prop">.hang-card</span>:<span class="kw">hover</span> {
+  <span class="prop">animation-play-state</span>: <span class="val">paused</span>;
+}
+
+<span class="kw">@keyframes</span> pendulum {
+  <span class="val">0%</span>   { <span class="prop">transform</span>: <span class="val">rotate(-10deg)</span>; }
+  <span class="val">50%</span>  { <span class="prop">transform</span>: <span class="val">rotate( 10deg)</span>; }
+  <span class="val">100%</span> { <span class="prop">transform</span>: <span class="val">rotate(-10deg)</span>; }
+}</pre>
+  </details>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     DEMO 2 – Floating Drift
+════════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">Demo 02</p>
+  <h2 class="section-title">🌊 Floating Drift — 浮遊ゆらぎ</h2>
+  <p class="section-desc">
+    <code>translateY</code> による上下移動と <code>rotate</code> を組み合わせて、水面に浮かぶような動きを再現。<br>
+    4ステップの keyframes で左傾き→上昇→右傾き→上昇の繰り返しにしています。
+  </p>
+  <div class="stage">
+    <div class="float-card float-a">
+      <span class="icon">🌿</span>
+      <span class="title">Nature</span>
+      <span class="sub">Calm & fresh</span>
+    </div>
+    <div class="float-card float-b">
+      <span class="icon">⭐</span>
+      <span class="title">Stellar</span>
+      <span class="sub">Night sky</span>
+    </div>
+    <div class="float-card float-c">
+      <span class="icon">🦋</span>
+      <span class="title">Flutter</span>
+      <span class="sub">Light as air</span>
+    </div>
+  </div>
+
+  <details>
+    <summary>CSS を見る</summary>
+    <pre><span class="cm">/* 上下移動 + 回転で浮遊感 */</span>
+<span class="prop">.float-card</span> {
+  <span class="prop">animation</span>: <span class="val">floatDrift 4s ease-in-out infinite</span>;
+}
+
+<span class="kw">@keyframes</span> floatDrift {
+  <span class="val">0%</span>   { <span class="prop">transform</span>: <span class="val">translateY(0px)   rotate(-3deg)</span>; }
+  <span class="val">25%</span>  { <span class="prop">transform</span>: <span class="val">translateY(-14px) rotate( 0deg)</span>; }
+  <span class="val">50%</span>  { <span class="prop">transform</span>: <span class="val">translateY(0px)   rotate( 3deg)</span>; }
+  <span class="val">75%</span>  { <span class="prop">transform</span>: <span class="val">translateY(-14px) rotate( 0deg)</span>; }
+  <span class="val">100%</span> { <span class="prop">transform</span>: <span class="val">translateY(0px)   rotate(-3deg)</span>; }
+}</pre>
+  </details>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     DEMO 3 – Wind Sway (3D)
+════════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">Demo 03</p>
+  <h2 class="section-title">💨 Wind Sway — 3D 風なびき</h2>
+  <p class="section-desc">
+    <code>perspective</code> と <code>rotateY</code> で奥行きのある 3D 揺れを表現。<br>
+    <code>rotateZ</code> と <code>translateX</code> を加えることで、風に押されているようなリアル感が出ます。
+  </p>
+  <div class="stage wind-stage">
+    <div class="wind-card wind-a">
+      <span class="icon">🔥</span>
+      <span class="title">Ember</span>
+      <span class="sub">Warm glow</span>
+    </div>
+    <div class="wind-card wind-b">
+      <span class="icon">🌱</span>
+      <span class="title">Sprout</span>
+      <span class="sub">New life</span>
+    </div>
+    <div class="wind-card wind-c">
+      <span class="icon">✨</span>
+      <span class="title">Spark</span>
+      <span class="sub">Pure energy</span>
+    </div>
+  </div>
+
+  <details>
+    <summary>CSS を見る</summary>
+    <pre><span class="cm">/* 親に perspective を設定 */</span>
+<span class="prop">.wind-stage</span> {
+  <span class="prop">perspective</span>: <span class="val">700px</span>;
+}
+
+<span class="cm">/* 3D 回転で風になびく動き */</span>
+<span class="prop">.wind-card</span> {
+  <span class="prop">transform-style</span>: <span class="val">preserve-3d</span>;
+  <span class="prop">animation</span>: <span class="val">windSway 2.8s ease-in-out infinite</span>;
+}
+
+<span class="kw">@keyframes</span> windSway {
+  <span class="val">0%</span>   { <span class="prop">transform</span>: <span class="val">rotateY(-18deg) rotateZ(-4deg) translateX(-4px)</span>; }
+  <span class="val">50%</span>  { <span class="prop">transform</span>: <span class="val">rotateY( 18deg) rotateZ( 4deg) translateX( 4px)</span>; }
+  <span class="val">100%</span> { <span class="prop">transform</span>: <span class="val">rotateY(-18deg) rotateZ(-4deg) translateX(-4px)</span>; }
+}</pre>
+  </details>
+</div>
+
+<a href="../" class="back">← Back to Home</a>
+
+</body>
+</html>
