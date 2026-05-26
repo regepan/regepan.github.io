@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Tower Defense</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -11,26 +11,29 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      min-height: 100vh;
+      justify-content: flex-start;
+      min-height: 100dvh;
       font-family: 'Courier New', monospace;
       color: #fff;
+      padding: 8px;
+      overflow-x: hidden;
     }
     h1 {
-      font-size: 1.4rem;
-      letter-spacing: 4px;
+      font-size: clamp(0.9rem, 3vw, 1.4rem);
+      letter-spacing: clamp(1px, 1vw, 4px);
       color: #4af;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       text-transform: uppercase;
     }
     #ui {
       display: flex;
-      gap: 16px;
-      margin-bottom: 8px;
-      font-size: 0.85rem;
+      gap: 8px 14px;
+      margin-bottom: 6px;
+      font-size: clamp(0.72rem, 2.5vw, 0.85rem);
       align-items: center;
       flex-wrap: wrap;
       justify-content: center;
+      width: 100%;
     }
     .stat { color: #adf; }
     .stat span { color: #fff; font-weight: bold; }
@@ -38,44 +41,58 @@
       border: 2px solid #4af;
       cursor: crosshair;
       display: block;
+      width: 100%;
+      max-width: 792px;
+      aspect-ratio: 792 / 572;
+      touch-action: none;
     }
     #panel {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       margin-top: 8px;
       flex-wrap: wrap;
       justify-content: center;
+      width: 100%;
+      max-width: 792px;
     }
     .tower-btn {
-      padding: 6px 14px;
+      padding: 8px 12px;
+      min-height: 48px;
+      min-width: 60px;
       border: 2px solid #555;
       background: #222;
       color: #ccc;
       cursor: pointer;
       font-family: inherit;
-      font-size: 0.8rem;
+      font-size: clamp(0.68rem, 2vw, 0.8rem);
       border-radius: 4px;
       transition: all 0.15s;
+      flex: 1 1 auto;
+      max-width: 140px;
+      text-align: center;
     }
     .tower-btn:hover { border-color: #4af; color: #fff; }
     .tower-btn.selected { border-color: #4af; background: #1a3a5a; color: #4af; }
-    .tower-btn .cost { color: #fa4; font-size: 0.75rem; display: block; }
+    .tower-btn .cost { color: #fa4; font-size: 0.68rem; display: block; margin-top: 2px; }
     #msg {
-      margin-top: 10px;
-      font-size: 1rem;
+      margin-top: 8px;
+      font-size: clamp(0.8rem, 2.5vw, 1rem);
       color: #fa4;
       min-height: 1.4em;
+      text-align: center;
     }
     #start-btn {
-      padding: 8px 24px;
+      padding: 8px 20px;
+      min-height: 40px;
       border: 2px solid #4af;
       background: #1a3a5a;
       color: #4af;
       cursor: pointer;
       font-family: inherit;
-      font-size: 0.9rem;
+      font-size: clamp(0.78rem, 2.5vw, 0.9rem);
       border-radius: 4px;
       transition: all 0.15s;
+      white-space: nowrap;
     }
     #start-btn:hover { background: #2a5a8a; }
     #start-btn:disabled { opacity: 0.4; cursor: default; }
@@ -93,7 +110,7 @@
 <canvas id="canvas"></canvas>
 <div id="panel">
   <button class="tower-btn selected" data-type="basic">
-    Basic Tower<span class="cost">50G | DMG:10 SPD:1.2s</span>
+    Basic<span class="cost">50G | DMG:10 SPD:1.2s</span>
   </button>
   <button class="tower-btn" data-type="sniper">
     Sniper<span class="cost">80G | DMG:40 SPD:3s</span>
@@ -102,10 +119,10 @@
     Rapid<span class="cost">70G | DMG:5 SPD:0.4s</span>
   </button>
   <button class="tower-btn" data-type="slow">
-    Freeze<span class="cost">60G | DMG:3 SPD:1s SLOW</span>
+    Freeze<span class="cost">60G | DMG:3 SLOW</span>
   </button>
   <button class="tower-btn" data-type="bomb">
-    Bomb<span class="cost">100G | DMG:30 SPD:2s AOE</span>
+    Bomb<span class="cost">100G | DMG:30 AOE</span>
   </button>
 </div>
 <div id="msg"></div>
@@ -210,12 +227,17 @@ function updateUI() {
   document.getElementById('score').textContent = state.score;
 }
 
-// Tower placement
-canvas.addEventListener('click', e => {
+function getCanvasCoords(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const sx = W / rect.width, sy = H / rect.height;
-  const mx = (e.clientX - rect.left) * sx;
-  const my = (e.clientY - rect.top) * sy;
+  return {
+    mx: (clientX - rect.left) * sx,
+    my: (clientY - rect.top) * sy,
+  };
+}
+
+function placeTowerAt(clientX, clientY) {
+  const { mx, my } = getCanvasCoords(clientX, clientY);
   const col = Math.floor(mx / CELL);
   const row = Math.floor(my / CELL);
   if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return;
@@ -231,19 +253,34 @@ canvas.addEventListener('click', e => {
     timer: 0,
   });
   updateUI();
-});
+}
+
+// Mouse events
+canvas.addEventListener('click', e => placeTowerAt(e.clientX, e.clientY));
 
 canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  const sx = W / rect.width, sy = H / rect.height;
-  const mx = (e.clientX - rect.left) * sx;
-  const my = (e.clientY - rect.top) * sy;
-  state.hoverCell = {
-    col: Math.floor(mx / CELL),
-    row: Math.floor(my / CELL),
-  };
+  const { mx, my } = getCanvasCoords(e.clientX, e.clientY);
+  state.hoverCell = { col: Math.floor(mx / CELL), row: Math.floor(my / CELL) };
 });
 canvas.addEventListener('mouseleave', () => { state.hoverCell = null; });
+
+// Touch events
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const { mx, my } = getCanvasCoords(touch.clientX, touch.clientY);
+  state.hoverCell = { col: Math.floor(mx / CELL), row: Math.floor(my / CELL) };
+  placeTowerAt(touch.clientX, touch.clientY);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const { mx, my } = getCanvasCoords(touch.clientX, touch.clientY);
+  state.hoverCell = { col: Math.floor(mx / CELL), row: Math.floor(my / CELL) };
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => { state.hoverCell = null; });
 
 document.querySelectorAll('.tower-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -329,7 +366,6 @@ function update(dt) {
     tower.timer = 0;
 
     if (def.aoe > 0) {
-      // Bomb: spawn explosion at target
       state.bullets.push({
         x: tower.cx, y: tower.cy,
         tx: target.x, ty: target.y,
@@ -363,11 +399,9 @@ function update(dt) {
       b.y += (dy / d) * b.spd * 2;
       return true;
     } else {
-      // bomb travels to position
       const dx = b.tx - b.x, dy = b.ty - b.y;
       const d = Math.hypot(dx, dy);
       if (d < b.spd * 2) {
-        // explode
         state.effects.push({ x: b.tx, y: b.ty, r: 0, maxR: b.aoe, life: 300, color: '#f84' });
         state.enemies.forEach(en => {
           if (Math.hypot(en.x - b.tx, en.y - b.ty) <= b.aoe) {
@@ -389,7 +423,6 @@ function update(dt) {
     return ef.life > 0;
   });
 
-  // Remove dead enemies
   state.enemies = state.enemies.filter(en => en.hp > 0);
 }
 
@@ -423,7 +456,7 @@ function draw() {
     }
   }
 
-  // Path arrows
+  // Path line
   ctx.strokeStyle = '#3a5a3a';
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -454,7 +487,6 @@ function draw() {
       if (canPlace) {
         ctx.fillStyle = canAfford ? 'rgba(64,170,255,0.15)' : 'rgba(255,100,100,0.15)';
         ctx.fillRect(col * CELL, row * CELL, CELL, CELL);
-        // Range preview
         ctx.strokeStyle = canAfford ? 'rgba(64,170,255,0.3)' : 'rgba(255,100,100,0.3)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -481,7 +513,6 @@ function draw() {
     ctx.arc(x, y, hs * 0.5, 0, Math.PI*2);
     ctx.fill();
 
-    // cooldown arc
     const progress = Math.min(tower.timer / def.fireRate, 1);
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.lineWidth = 2;
@@ -492,13 +523,11 @@ function draw() {
 
   // Enemies
   state.enemies.forEach(en => {
-    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
     ctx.ellipse(en.x, en.y + en.size * 0.8, en.size * 0.7, en.size * 0.3, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // Body
     ctx.fillStyle = en.slowTimer > 0 ? '#aaf' : en.color;
     ctx.beginPath();
     ctx.arc(en.x, en.y, en.size, 0, Math.PI*2);
@@ -507,7 +536,6 @@ function draw() {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // HP bar
     const bw = en.size * 2.2;
     const bh = 4;
     const bx = en.x - bw / 2;
