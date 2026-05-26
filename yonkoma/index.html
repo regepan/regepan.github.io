@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4コマ漫画</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f5f0e8;
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 40px;
+      color: #333;
+      letter-spacing: 0.1em;
+    }
+
+    .manga-section {
+      max-width: 900px;
+      margin: 0 auto 60px;
+    }
+
+    .manga-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #fff;
+      background: #333;
+      display: inline-block;
+      padding: 6px 20px;
+      margin-bottom: 0;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .strip {
+      display: flex;
+      border: 3px solid #333;
+      background: #fff;
+    }
+
+    .panel {
+      flex: 1;
+      border-right: 3px solid #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 12px;
+      min-height: 200px;
+      position: relative;
+    }
+
+    .panel:last-child {
+      border-right: none;
+    }
+
+    .panel-num {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      font-size: 0.7rem;
+      color: #999;
+      font-weight: bold;
+    }
+
+    .art {
+      font-size: 3.2rem;
+      line-height: 1.2;
+      text-align: center;
+      margin: 8px 0;
+    }
+
+    .speech {
+      background: #fff;
+      border: 2px solid #333;
+      border-radius: 12px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      text-align: center;
+      width: 100%;
+      position: relative;
+    }
+
+    .speech::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top: 8px solid #333;
+    }
+
+    .speech.top::after {
+      display: none;
+    }
+
+    .speech.top::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-bottom: 8px solid #333;
+    }
+
+    .narration {
+      background: #fffde7;
+      border: 1px solid #bbb;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      color: #555;
+      text-align: center;
+      width: 100%;
+      border-radius: 4px;
+    }
+
+    .effect {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #e53935;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 600px) {
+      .strip { flex-direction: column; }
+      .panel { border-right: none; border-bottom: 3px solid #333; }
+      .panel:last-child { border-bottom: none; }
+      .panel { min-height: 160px; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>4コマ漫画</h1>
+
+<!-- ===== 1本目 ===== -->
+<div class="manga-section">
+  <div class="manga-title">第1話「朝のコーヒー」</div>
+  <div class="strip">
+
+    <div class="panel">
+      <span class="panel-num">1</span>
+      <div class="narration">月曜日の朝</div>
+      <div class="art">😴<br>☕</div>
+      <div class="speech">コーヒーが<br>飲みたい…</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">2</span>
+      <div class="art">🧑‍🍳<br>⚙️💨</div>
+      <div class="speech">よし！<br>いれるぞ！</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">3</span>
+      <div class="art">☕✨</div>
+      <div class="narration">完成！</div>
+      <div class="effect">ゴクゴク…</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">4</span>
+      <div class="art">😳</div>
+      <div class="speech">砂糖を<br>入れ忘れた</div>
+      <div class="narration">また明日も頑張ろう</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== 2本目 ===== -->
+<div class="manga-section">
+  <div class="manga-title">第2話「傘を忘れた日」</div>
+  <div class="strip">
+
+    <div class="panel">
+      <span class="panel-num">1</span>
+      <div class="narration">出かける前</div>
+      <div class="art">🌤️</div>
+      <div class="speech">晴れてる！<br>傘いらない！</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">2</span>
+      <div class="art">🚶‍♂️<br>🌤️</div>
+      <div class="speech">最高の<br>天気だな〜</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">3</span>
+      <div class="art">🚶‍♂️<br>🌧️</div>
+      <div class="effect">ザーッ！！</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">4</span>
+      <div class="art">🥺<br>💧💧</div>
+      <div class="speech">天気予報<br>見ればよかった</div>
+      <div class="narration">びしょ濡れ</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== 3本目 ===== -->
+<div class="manga-section">
+  <div class="manga-title">第3話「ダイエット」</div>
+  <div class="strip">
+
+    <div class="panel">
+      <span class="panel-num">1</span>
+      <div class="narration">1月1日</div>
+      <div class="art">💪</div>
+      <div class="speech">今年こそ<br>ダイエットする！</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">2</span>
+      <div class="art">🏃‍♂️<br>💨</div>
+      <div class="speech">走るぞ〜！！</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">3</span>
+      <div class="art">🍰🍟<br>😋</div>
+      <div class="speech">今日だけ<br>特別…</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">4</span>
+      <div class="art">📅</div>
+      <div class="narration">1月2日</div>
+      <div class="speech">来年こそ<br>頑張ろう</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
