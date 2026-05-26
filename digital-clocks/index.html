@@ -8,26 +8,18 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #111;
-      font-family: sans-serif;
+      background: #0e0e0e;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 60px;
-      padding: 40px 20px;
+      padding: 48px 20px;
+      font-family: sans-serif;
     }
 
-    h1 {
-      color: #fff;
-      font-size: 1.4rem;
-      letter-spacing: 0.1em;
-      opacity: 0.5;
-    }
-
-    /* ─── Clock wrapper ─── */
-    .clock-wrap {
+    .clock-section {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -35,545 +27,276 @@
     }
 
     .clock-label {
-      font-size: 0.75rem;
-      letter-spacing: 0.15em;
+      font-size: 0.68rem;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
-      opacity: 0.4;
-      color: #fff;
+      color: #444;
     }
 
-    .date-text {
-      font-size: 0.8rem;
-      letter-spacing: 0.08em;
-      color: #aaa;
+    .date-str {
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
     }
 
-    /* ══════════════════════════════════════════
-       Clock 1 — Flip (カード反転)
-    ══════════════════════════════════════════ */
-    #clock1 {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-
-    .flip-unit {
-      display: flex;
-      gap: 3px;
-    }
-
-    .flip-card {
-      position: relative;
-      width: 54px;
-      height: 72px;
-      perspective: 200px;
-    }
-
-    .flip-card .upper,
-    .flip-card .lower {
-      position: absolute;
-      width: 100%;
-      height: 50%;
-      background: #1a1a2e;
-      border-radius: 4px 4px 0 0;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-    }
-
-    .flip-card .lower {
-      top: 50%;
-      border-radius: 0 0 4px 4px;
-      align-items: flex-start;
-      border-top: 1px solid #0d0d1a;
-    }
-
-    .flip-card .upper span,
-    .flip-card .lower span {
-      font-family: 'Courier New', monospace;
-      font-size: 3rem;
-      font-weight: bold;
-      color: #e2e8f0;
-      line-height: 1;
-      display: block;
-    }
-
-    .flip-card .upper span { transform: translateY(50%); }
-    .flip-card .lower span { transform: translateY(-50%); }
-
-    /* active flip */
-    .flip-card .flip-top {
-      position: absolute;
-      width: 100%;
-      height: 50%;
-      background: #1a1a2e;
-      border-radius: 4px 4px 0 0;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      transform-origin: bottom center;
-      animation: flipTop 0.35s ease-in forwards;
-      z-index: 10;
-    }
-
-    .flip-card .flip-top span {
-      font-family: 'Courier New', monospace;
-      font-size: 3rem;
-      font-weight: bold;
-      color: #e2e8f0;
-      line-height: 1;
-      transform: translateY(50%);
-    }
-
-    .flip-card .flip-bottom {
-      position: absolute;
-      top: 50%;
-      width: 100%;
-      height: 50%;
-      background: #1a1a2e;
-      border-radius: 0 0 4px 4px;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      transform-origin: top center;
-      animation: flipBottom 0.35s ease-out 0.35s forwards;
-      z-index: 10;
-      transform: rotateX(-90deg);
-      border-top: 1px solid #0d0d1a;
-    }
-
-    .flip-card .flip-bottom span {
-      font-family: 'Courier New', monospace;
-      font-size: 3rem;
-      font-weight: bold;
-      color: #e2e8f0;
-      line-height: 1;
-      transform: translateY(-50%);
-    }
-
-    @keyframes flipTop {
-      0%   { transform: rotateX(0deg); }
-      100% { transform: rotateX(-90deg); }
-    }
-
-    @keyframes flipBottom {
-      0%   { transform: rotateX(-90deg); }
-      100% { transform: rotateX(0deg); }
-    }
-
-    .colon1 {
-      font-size: 3rem;
-      font-weight: bold;
-      color: #5a7ecf;
-      line-height: 72px;
-      padding-bottom: 4px;
-      animation: blink1 1s step-start infinite;
-    }
-
-    @keyframes blink1 {
-      0%, 49% { opacity: 1; }
-      50%, 100% { opacity: 0.15; }
-    }
-
-    /* ══════════════════════════════════════════
-       Clock 2 — Neon Glow (スライドアップ)
-    ══════════════════════════════════════════ */
-    #clock2-wrap {
-      background: #0a0a0a;
-      padding: 28px 36px 24px;
-      border-radius: 16px;
-      border: 1px solid #222;
-    }
-
-    #clock2 {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
-
-    .neon-digit-wrap {
-      width: 56px;
-      height: 80px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .neon-digit-inner {
-      display: flex;
-      flex-direction: column;
-      transition: none;
-    }
-
-    .neon-digit-inner.sliding {
-      animation: slideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    }
-
-    @keyframes slideUp {
-      0%   { transform: translateY(0); }
-      100% { transform: translateY(-80px); }
-    }
-
-    .neon-digit {
-      width: 56px;
-      height: 80px;
+    .clock-row {
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-family: 'Courier New', monospace;
-      font-size: 3.2rem;
-      font-weight: bold;
-      color: #0ff;
-      text-shadow:
-        0 0 4px #0ff,
-        0 0 12px #0ff,
-        0 0 28px #0bf,
-        0 0 50px #09f;
-      flex-shrink: 0;
+      gap: 10px;
     }
 
-    .colon2 {
-      font-size: 3rem;
-      font-weight: bold;
-      color: #f0f;
-      text-shadow:
-        0 0 4px #f0f,
-        0 0 12px #f0f,
-        0 0 28px #d0d;
-      line-height: 80px;
-      padding-bottom: 4px;
-      animation: blink2 1s step-start infinite;
-    }
-
-    @keyframes blink2 {
-      0%, 49% { opacity: 1; }
-      50%, 100% { opacity: 0.1; }
-    }
-
-    #clock2-date {
-      color: #0cf;
-      text-shadow: 0 0 6px #0cf;
-    }
-
-    /* ══════════════════════════════════════════
-       Clock 3 — Minimal Fade (シンプルフェード)
-    ══════════════════════════════════════════ */
-    #clock3-wrap {
-      background: #f5f5f0;
-      padding: 32px 44px 28px;
-      border-radius: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 32px rgba(0,0,0,0.4);
-    }
-
-    #clock3-wrap .clock-label {
-      color: #888;
-    }
-
-    #clock3-wrap .date-text {
-      color: #999;
-    }
-
-    #clock3 {
-      display: flex;
+    /* ── Dot Matrix 5×7 ── */
+    .dm {
+      display: grid;
+      grid-template-columns: repeat(5, 7px);
+      grid-template-rows: repeat(7, 7px);
       gap: 2px;
-      align-items: center;
+      width: 43px;
+      height: 61px;
     }
+    .dm .d { width: 7px; height: 7px; border-radius: 50%; }
 
-    .fade-digit-wrap {
-      width: 52px;
-      height: 76px;
-      position: relative;
+    /* ── Colon (2 stacked dots) ── */
+    .colon-col {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      height: 61px;
+      gap: 16px;
+    }
+    .colon-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+    /* shared blink */
+    @keyframes blink {
+      0%,49%  { opacity: 1; }
+      50%,100%{ opacity: 0.1; }
     }
 
-    .fade-digit {
-      position: absolute;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 3.6rem;
-      font-weight: 300;
-      color: #222;
-      letter-spacing: -0.05em;
+
+    /* ══════════════════════════════════════
+       Clock 1 — Matrix Green  /  Flip
+    ══════════════════════════════════════ */
+    .c1-panel {
+      background: #050505;
+      border: 1px solid #192a17;
+      border-radius: 10px;
+      padding: 22px 26px 18px;
     }
 
-    .fade-digit.fade-out {
-      animation: fadeOutUp 0.25s ease forwards;
+    .c1-slot { perspective: 400px; width: 43px; height: 61px; }
+    .c1-slot .dm { transform-origin: center center; }
+
+    .c1-slot .dm.flip-out { animation: c1Out 0.18s ease-in  forwards; }
+    .c1-slot .dm.flip-in  { animation: c1In  0.18s ease-out forwards; }
+
+    @keyframes c1Out { from{transform:rotateX(0)}   to{transform:rotateX(-90deg)} }
+    @keyframes c1In  { from{transform:rotateX(90deg)} to{transform:rotateX(0)} }
+
+    .c1-slot .d.on  { background: #3dff20; box-shadow: 0 0 4px #3dff20, 0 0 10px #3dff2055; }
+    .c1-slot .d.off { background: #0a1e08; }
+
+    .c1-colon .colon-dot { background: #3dff20; box-shadow: 0 0 5px #3dff20; }
+    .c1-colon { animation: blink 1s step-start infinite; }
+    .c1-date  { color: #276020; }
+
+
+    /* ══════════════════════════════════════
+       Clock 2 — Neon Cyan  /  Slide Up
+    ══════════════════════════════════════ */
+    .c2-panel {
+      background: #030308;
+      border: 1px solid #0a0a1e;
+      border-radius: 12px;
+      padding: 22px 26px 18px;
     }
 
-    .fade-digit.fade-in {
-      animation: fadeInUp 0.25s ease forwards;
-    }
+    .c2-slot { width: 43px; height: 61px; overflow: hidden; position: relative; }
+    .c2-slot .dm { position: absolute; top: 0; left: 0; }
 
-    @keyframes fadeOutUp {
-      0%   { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-16px) scale(0.85); }
-    }
+    .c2-slot .dm.slide-out { animation: c2Out 0.26s cubic-bezier(.4,0,.6,1) forwards; }
+    .c2-slot .dm.slide-in  { animation: c2In  0.26s cubic-bezier(.4,0,.6,1) forwards; }
 
-    @keyframes fadeInUp {
-      0%   { opacity: 0; transform: translateY(16px) scale(0.85); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
+    @keyframes c2Out { to  { transform: translateY(-61px); opacity: 0; } }
+    @keyframes c2In  { from{ transform: translateY( 61px); opacity: 0; }
+                       to  { transform: translateY(0);     opacity: 1; } }
 
-    .colon3 {
-      font-family: Georgia, serif;
-      font-size: 3rem;
-      font-weight: 300;
-      color: #ccc;
-      line-height: 76px;
-      padding-bottom: 4px;
-      animation: blink3 1s step-start infinite;
-    }
+    .c2-slot .d.on  { background: #00eeff; box-shadow: 0 0 5px #00eeff, 0 0 14px #00bbff55; }
+    .c2-slot .d.off { background: #00141a; }
 
-    @keyframes blink3 {
-      0%, 49% { opacity: 1; }
-      50%, 100% { opacity: 0.1; }
-    }
+    .c2-colon .colon-dot { background: #ff00cc; box-shadow: 0 0 5px #ff00cc, 0 0 12px #cc009955; }
+    .c2-colon { animation: blink 1s step-start infinite; }
+    .c2-date  { color: #007799; }
 
+
+    /* ══════════════════════════════════════
+       Clock 3 — Minimal Dark-on-Light  /  Fade
+    ══════════════════════════════════════ */
+    .c3-outer {
+      background: #f0ede6;
+      border-radius: 16px;
+      padding: 28px 32px 22px;
+      box-shadow: 0 6px 36px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .c3-label { color: #aaa !important; }
+    .c3-date  { color: #b5b2ab; }
+
+    .c3-slot { width: 43px; height: 61px; position: relative; }
+    .c3-slot .dm { position: absolute; top: 0; left: 0; }
+
+    .c3-slot .dm.fade-out { animation: c3Out 0.18s ease forwards; }
+    .c3-slot .dm.fade-in  { animation: c3In  0.22s ease forwards; }
+
+    @keyframes c3Out { to  { opacity: 0; transform: scale(.82); } }
+    @keyframes c3In  { from{ opacity: 0; transform: scale(.82); }
+                       to  { opacity: 1; transform: scale(1);   } }
+
+    .c3-slot .d.on  { background: #2d2d2d; }
+    .c3-slot .d.off { background: #d5d2cb; }
+
+    .c3-colon .colon-dot { background: #c5c2bb; }
+    .c3-colon { animation: blink 1s step-start infinite; }
   </style>
 </head>
 <body>
 
-<!-- ── Clock 1: Flip ── -->
-<div class="clock-wrap">
-  <span class="clock-label">Flip Clock</span>
-  <div id="clock1">
-    <div class="flip-unit" id="flip-h"></div>
-    <div class="colon1">:</div>
-    <div class="flip-unit" id="flip-m"></div>
-    <div class="colon1">:</div>
-    <div class="flip-unit" id="flip-s"></div>
+  <div class="clock-section">
+    <span class="clock-label">Matrix Clock</span>
+    <div class="c1-panel"><div class="clock-row" id="row1"></div></div>
+    <span class="date-str c1-date" id="date1"></span>
   </div>
-  <span class="date-text" id="date1"></span>
-</div>
 
-<!-- ── Clock 2: Neon Slide ── -->
-<div class="clock-wrap">
-  <span class="clock-label">Neon Clock</span>
-  <div id="clock2-wrap">
-    <div id="clock2">
-      <div class="neon-digit-wrap"><div class="neon-digit-inner" id="n-h0"><div class="neon-digit">0</div></div></div>
-      <div class="neon-digit-wrap"><div class="neon-digit-inner" id="n-h1"><div class="neon-digit">0</div></div></div>
-      <div class="colon2">:</div>
-      <div class="neon-digit-wrap"><div class="neon-digit-inner" id="n-m0"><div class="neon-digit">0</div></div></div>
-      <div class="neon-digit-wrap"><div class="neon-digit-inner" id="n-m1"><div class="neon-digit">0</div></div></div>
-      <div class="colon2">:</div>
-      <div class="neon-digit-wrap"><div class="neon-digit-inner" id="n-s0"><div class="neon-digit">0</div></div></div>
-      <div class="neon-digit-wrap"><div class="neon-digit-inner" id="n-s1"><div class="neon-digit">0</div></div></div>
+  <div class="clock-section">
+    <span class="clock-label">Neon Clock</span>
+    <div class="c2-panel"><div class="clock-row" id="row2"></div></div>
+    <span class="date-str c2-date" id="date2"></span>
+  </div>
+
+  <div class="clock-section">
+    <span class="clock-label c3-label">Minimal Clock</span>
+    <div class="c3-outer">
+      <div class="clock-row" id="row3"></div>
+      <span class="date-str c3-date" id="date3"></span>
     </div>
   </div>
-  <span class="date-text" id="date2" style="color:#0cf;text-shadow:0 0 6px #0cf"></span>
-</div>
-
-<!-- ── Clock 3: Minimal Fade ── -->
-<div class="clock-wrap">
-  <span class="clock-label" style="color:#888">Minimal Clock</span>
-  <div id="clock3-wrap">
-    <div id="clock3">
-      <div class="fade-digit-wrap"><div class="fade-digit" id="f-h0">0</div></div>
-      <div class="fade-digit-wrap"><div class="fade-digit" id="f-h1">0</div></div>
-      <div class="colon3">:</div>
-      <div class="fade-digit-wrap"><div class="fade-digit" id="f-m0">0</div></div>
-      <div class="fade-digit-wrap"><div class="fade-digit" id="f-m1">0</div></div>
-      <div class="colon3">:</div>
-      <div class="fade-digit-wrap"><div class="fade-digit" id="f-s0">0</div></div>
-      <div class="fade-digit-wrap"><div class="fade-digit" id="f-s1">0</div></div>
-    </div>
-    <span class="date-text" id="date3"></span>
-  </div>
-</div>
 
 <script>
-/* ── helpers ── */
-function pad2(n) { return String(n).padStart(2, '0'); }
+/* ── 5×7 dot patterns (row-major, 35 bits) ── */
+const PT = {
+  '0':[0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '1':[0,0,1,0,0, 0,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0],
+  '2':[0,1,1,1,0, 1,0,0,0,1, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,1,1,1,1],
+  '3':[1,1,1,1,0, 0,0,0,0,1, 0,0,0,0,1, 0,1,1,1,0, 0,0,0,0,1, 0,0,0,0,1, 1,1,1,1,0],
+  '4':[0,0,0,1,0, 0,0,1,1,0, 0,1,0,1,0, 1,0,0,1,0, 1,1,1,1,1, 0,0,0,1,0, 0,0,0,1,0],
+  '5':[1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 0,0,0,0,1, 0,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '6':[0,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '7':[1,1,1,1,1, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0],
+  '8':[0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+  '9':[0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,1, 0,0,0,0,1, 0,0,0,0,1, 0,1,1,1,0],
+};
 
-function formatDate(d) {
-  const days = ['日','月','火','水','木','金','土'];
-  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 (${days[d.getDay()]})`;
+const DAYS = ['日','月','火','水','木','金','土'];
+const pad2 = n => String(n).padStart(2, '0');
+const fmtDate = d =>
+  `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;
+
+function makeDM(char) {
+  const dm = document.createElement('div');
+  dm.className = 'dm';
+  PT[char].forEach(lit => {
+    const d = document.createElement('div');
+    d.className = 'd ' + (lit ? 'on' : 'off');
+    dm.appendChild(d);
+  });
+  return dm;
 }
 
-/* ══ Clock 1 — Flip ══ */
-const flipPrev = { h: '', m: '', s: '' };
-
-function buildFlipUnit(container, value) {
-  container.innerHTML = '';
-  for (const ch of value) {
-    const card = document.createElement('div');
-    card.className = 'flip-card';
-    card.innerHTML = `
-      <div class="upper"><span>${ch}</span></div>
-      <div class="lower"><span>${ch}</span></div>`;
-    container.appendChild(card);
-  }
+function applyPT(dm, char) {
+  const p = PT[char], dots = dm.children;
+  for (let i = 0; i < 35; i++) dots[i].className = 'd ' + (p[i] ? 'on' : 'off');
 }
 
-function flipTo(container, oldVal, newVal) {
-  const cards = container.querySelectorAll('.flip-card');
-  for (let i = 0; i < newVal.length; i++) {
-    if (oldVal[i] === newVal[i]) continue;
-    const card = cards[i];
-
-    // Remove any existing animation elements
-    card.querySelectorAll('.flip-top, .flip-bottom').forEach(el => el.remove());
-
-    // Update static halves to new value
-    card.querySelector('.upper span').textContent = newVal[i];
-    card.querySelector('.lower span').textContent = newVal[i];
-
-    // Animate: top flips away (showing old), bottom reveals (showing new)
-    const top = document.createElement('div');
-    top.className = 'flip-top';
-    top.innerHTML = `<span>${oldVal[i]}</span>`;
-
-    const bot = document.createElement('div');
-    bot.className = 'flip-bottom';
-    bot.innerHTML = `<span>${newVal[i]}</span>`;
-
-    card.appendChild(top);
-    card.appendChild(bot);
-
-    top.addEventListener('animationend', () => top.remove());
-    bot.addEventListener('animationend', () => bot.remove());
-  }
+function makeColon(cls) {
+  const c = document.createElement('div');
+  c.className = `colon-col ${cls}`;
+  [0,1].forEach(() => {
+    const d = document.createElement('div');
+    d.className = 'colon-dot';
+    c.appendChild(d);
+  });
+  return c;
 }
 
-function tickFlip() {
-  const now = new Date();
-  const h = pad2(now.getHours());
-  const m = pad2(now.getMinutes());
-  const s = pad2(now.getSeconds());
-
-  const hEl = document.getElementById('flip-h');
-  const mEl = document.getElementById('flip-m');
-  const sEl = document.getElementById('flip-s');
-
-  if (flipPrev.h === '') {
-    buildFlipUnit(hEl, h);
-    buildFlipUnit(mEl, m);
-    buildFlipUnit(sEl, s);
-  } else {
-    flipTo(hEl, flipPrev.h, h);
-    flipTo(mEl, flipPrev.m, m);
-    flipTo(sEl, flipPrev.s, s);
-  }
-
-  flipPrev.h = h; flipPrev.m = m; flipPrev.s = s;
-  document.getElementById('date1').textContent = formatDate(now);
+/* ── Generic clock builder ── */
+function buildClock(rowEl, slotClass, colonClass) {
+  const slots = {};
+  ['h0','h1',null,'m0','m1',null,'s0','s1'].forEach(id => {
+    if (!id) { rowEl.appendChild(makeColon(colonClass)); return; }
+    const slot = document.createElement('div');
+    slot.className = slotClass;
+    const dm = makeDM('0');
+    slot.appendChild(dm);
+    rowEl.appendChild(slot);
+    slots[id] = { slot, dm, prev: '0' };
+  });
+  return slots;
 }
 
-/* ══ Clock 2 — Neon Slide ══ */
-const neonPrev = {};
-
-function neonSlide(id, newCh) {
-  const inner = document.getElementById(id);
-  const current = neonPrev[id];
-  if (current === newCh) return;
-  neonPrev[id] = newCh;
-
-  // Append new digit below current
-  const next = document.createElement('div');
-  next.className = 'neon-digit';
-  next.textContent = newCh;
-  inner.appendChild(next);
-
-  // Trigger slide
-  inner.classList.remove('sliding');
-  void inner.offsetWidth; // reflow
-  inner.classList.add('sliding');
-
-  inner.addEventListener('animationend', () => {
-    inner.classList.remove('sliding');
-    inner.style.transform = '';
-    // Remove old digit
-    if (inner.children.length > 1) inner.removeChild(inner.children[0]);
+/* ── Animation drivers ── */
+function animUpdate(entry, char, outClass, inClass) {
+  if (entry.prev === char) return;
+  entry.prev = char;
+  const { dm } = entry;
+  dm.classList.add(outClass);
+  dm.addEventListener('animationend', () => {
+    dm.classList.remove(outClass);
+    applyPT(dm, char);
+    dm.classList.add(inClass);
+    dm.addEventListener('animationend', () => dm.classList.remove(inClass), { once: true });
   }, { once: true });
 }
 
-function tickNeon() {
+function tick(slots, dateEl, outCls, inCls) {
   const now = new Date();
-  const h = pad2(now.getHours());
-  const m = pad2(now.getMinutes());
-  const s = pad2(now.getSeconds());
-
-  neonSlide('n-h0', h[0]); neonSlide('n-h1', h[1]);
-  neonSlide('n-m0', m[0]); neonSlide('n-m1', m[1]);
-  neonSlide('n-s0', s[0]); neonSlide('n-s1', s[1]);
-
-  document.getElementById('date2').textContent = formatDate(now);
+  const h = pad2(now.getHours()), m = pad2(now.getMinutes()), s = pad2(now.getSeconds());
+  animUpdate(slots.h0, h[0], outCls, inCls);
+  animUpdate(slots.h1, h[1], outCls, inCls);
+  animUpdate(slots.m0, m[0], outCls, inCls);
+  animUpdate(slots.m1, m[1], outCls, inCls);
+  animUpdate(slots.s0, s[0], outCls, inCls);
+  animUpdate(slots.s1, s[1], outCls, inCls);
+  dateEl.textContent = fmtDate(now);
 }
 
-/* ══ Clock 3 — Minimal Fade ══ */
-const fadePrev = {};
+/* ── Build all 3 clocks ── */
+const s1 = buildClock(document.getElementById('row1'), 'c1-slot', 'c1-colon');
+const s2 = buildClock(document.getElementById('row2'), 'c2-slot', 'c2-colon');
+const s3 = buildClock(document.getElementById('row3'), 'c3-slot', 'c3-colon');
+const d1 = document.getElementById('date1');
+const d2 = document.getElementById('date2');
+const d3 = document.getElementById('date3');
 
-function fadeTo(id, newCh) {
-  const el = document.getElementById(id);
-  if (fadePrev[id] === newCh) return;
-  fadePrev[id] = newCh;
-
-  // Fade out old
-  el.classList.remove('fade-in', 'fade-out');
-  void el.offsetWidth;
-  el.classList.add('fade-out');
-
-  el.addEventListener('animationend', () => {
-    el.textContent = newCh;
-    el.classList.remove('fade-out');
-    el.classList.add('fade-in');
-    el.addEventListener('animationend', () => el.classList.remove('fade-in'), { once: true });
-  }, { once: true });
-}
-
-function tickFade() {
+/* ── Init: set current time without animation ── */
+(function initTime() {
   const now = new Date();
-  const h = pad2(now.getHours());
-  const m = pad2(now.getMinutes());
-  const s = pad2(now.getSeconds());
-
-  fadeTo('f-h0', h[0]); fadeTo('f-h1', h[1]);
-  fadeTo('f-m0', m[0]); fadeTo('f-m1', m[1]);
-  fadeTo('f-s0', s[0]); fadeTo('f-s1', s[1]);
-
-  document.getElementById('date3').textContent = formatDate(now);
-}
-
-/* ── init ── */
-function init() {
-  const now = new Date();
-  const h = pad2(now.getHours());
-  const m = pad2(now.getMinutes());
-  const s = pad2(now.getSeconds());
-
-  // Neon initial values
-  ['n-h0','n-h1','n-m0','n-m1','n-s0','n-s1'].forEach((id, i) => {
-    const val = (h+m+s)[i];
-    const inner = document.getElementById(id);
-    inner.querySelector('.neon-digit').textContent = val;
-    neonPrev[id] = val;
+  const h = pad2(now.getHours()), m = pad2(now.getMinutes()), s = pad2(now.getSeconds());
+  const chars = { h0:h[0], h1:h[1], m0:m[0], m1:m[1], s0:s[0], s1:s[1] };
+  [s1, s2, s3].forEach(slots => {
+    Object.entries(slots).forEach(([id, entry]) => {
+      applyPT(entry.dm, chars[id]);
+      entry.prev = chars[id];
+    });
   });
+  [d1, d2, d3].forEach(el => el.textContent = fmtDate(now));
+})();
 
-  // Fade initial values
-  ['f-h0','f-h1','f-m0','f-m1','f-s0','f-s1'].forEach((id, i) => {
-    const val = (h+m+s)[i];
-    document.getElementById(id).textContent = val;
-    fadePrev[id] = val;
-  });
-
-  tickFlip();
-  tickNeon();
-  tickFade();
-}
-
-init();
 setInterval(() => {
-  tickFlip();
-  tickNeon();
-  tickFade();
+  tick(s1, d1, 'flip-out',  'flip-in');
+  tick(s2, d2, 'slide-out', 'slide-in');
+  tick(s3, d3, 'fade-out',  'fade-in');
 }, 1000);
 </script>
 
