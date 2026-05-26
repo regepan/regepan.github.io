@@ -8,8 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
     <style>
         code, .mono { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
-        .line-add  { background: #d1fae5; }
-        .line-add  td.prefix { color: #059669; }
+        .line-add    { background: #d1fae5; }
+        .line-add    td.prefix { color: #059669; }
         .line-remove { background: #fee2e2; }
         .line-remove td.prefix { color: #dc2626; }
         .line-context { background: #fff; }
@@ -17,51 +17,74 @@
         .collapsed-row { background: #f3f4f6; cursor: pointer; }
         .collapsed-row:hover { background: #e5e7eb; }
         tr:hover td { filter: brightness(0.97); }
+        textarea { resize: vertical; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
 <div class="max-w-7xl mx-auto p-6">
     <h1 class="text-2xl font-bold text-gray-800 mb-1">HTML Diff Tool</h1>
-    <p class="text-sm text-gray-500 mb-6">2つのURLのHTMLを取得して差分を表示します</p>
+    <p class="text-sm text-gray-500 mb-6">URLから取得するか、HTMLを直接貼り付けて差分を比較します</p>
 
-    <!-- Input -->
-    <div class="bg-white rounded-xl shadow p-6 mb-5">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-                <label class="block text-sm font-semibold text-gray-600 mb-1">URL A <span class="text-red-500 font-normal">(比較元)</span></label>
+    <!-- Input panels -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+        <!-- Side A -->
+        <div class="bg-white rounded-xl shadow p-4">
+            <div class="text-sm font-semibold text-red-600 mb-2">A（比較元）</div>
+            <div class="flex gap-2 mb-2">
                 <input type="url" id="urlA"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="https://example.com">
+                <button id="fetchA"
+                    class="shrink-0 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+                    取得
+                </button>
             </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-600 mb-1">URL B <span class="text-green-600 font-normal">(比較先)</span></label>
+            <div id="fetchErrorA" class="hidden text-xs text-red-600 mb-2 bg-red-50 border border-red-200 rounded px-2 py-1"></div>
+            <textarea id="htmlA" rows="10"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="URLから取得するか、HTMLをここに貼り付けてください"></textarea>
+        </div>
+
+        <!-- Side B -->
+        <div class="bg-white rounded-xl shadow p-4">
+            <div class="text-sm font-semibold text-green-700 mb-2">B（比較先）</div>
+            <div class="flex gap-2 mb-2">
                 <input type="url" id="urlB"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="https://example.com/other">
+                <button id="fetchB"
+                    class="shrink-0 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+                    取得
+                </button>
             </div>
+            <div id="fetchErrorB" class="hidden text-xs text-red-600 mb-2 bg-red-50 border border-red-200 rounded px-2 py-1"></div>
+            <textarea id="htmlB" rows="10"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="URLから取得するか、HTMLをここに貼り付けてください"></textarea>
         </div>
+    </div>
 
-        <div class="flex flex-wrap items-center gap-5 mb-4 text-sm text-gray-600">
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="prettyPrint" checked class="rounded accent-blue-600">
-                タグごとに改行してから比較
-            </label>
-            <label class="flex items-center gap-2">
-                コンテキスト行数:
-                <input type="number" id="contextLines" value="3" min="0" max="50"
-                    class="w-16 border border-gray-300 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </label>
-        </div>
-
+    <!-- Options + Compare -->
+    <div class="bg-white rounded-xl shadow px-5 py-4 mb-5 flex flex-wrap items-center gap-5">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" id="prettyPrint" checked class="rounded accent-blue-600">
+            タグごとに改行してから比較
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-600">
+            コンテキスト行数:
+            <input type="number" id="contextLines" value="3" min="0" max="50"
+                class="w-16 border border-gray-300 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </label>
         <button id="compareBtn"
-            class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold px-6 py-2 rounded-lg transition-colors text-sm">
+            class="ml-auto bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold px-6 py-2 rounded-lg transition-colors text-sm">
             比較する
         </button>
     </div>
 
-    <!-- Status / Error -->
-    <div id="statusBar" class="hidden rounded-lg p-3 mb-4 text-sm"></div>
+    <!-- Compare error -->
+    <div id="compareError" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-700 text-sm"></div>
 
     <!-- Results -->
     <div id="results" class="hidden">
@@ -91,6 +114,36 @@ async function fetchHtml(url) {
     return res.text();
 }
 
+async function handleFetch(side) {
+    const urlEl  = document.getElementById(`url${side}`);
+    const taEl   = document.getElementById(`html${side}`);
+    const errEl  = document.getElementById(`fetchError${side}`);
+    const btn    = document.getElementById(`fetch${side}`);
+
+    const url = urlEl.value.trim();
+    if (!url) { showFetchError(errEl, 'URLを入力してください。'); return; }
+
+    errEl.classList.add('hidden');
+    btn.textContent = '取得中...';
+    btn.disabled = true;
+
+    try {
+        const html = await fetchHtml(url);
+        taEl.value = html;
+    } catch (e) {
+        showFetchError(errEl,
+            `取得失敗: ${e.message}。CORSブロックの可能性があります。HTMLを直接テキストエリアに貼り付けてください。`);
+    } finally {
+        btn.textContent = '取得';
+        btn.disabled = false;
+    }
+}
+
+function showFetchError(el, msg) {
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+
 function formatHtml(html) {
     return html
         .replace(/\r\n|\r/g, '\n')
@@ -105,19 +158,6 @@ function esc(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function setStatus(msg, isError) {
-    const el = document.getElementById('statusBar');
-    el.className = `rounded-lg p-3 mb-4 text-sm ${isError
-        ? 'bg-red-50 border border-red-200 text-red-700'
-        : 'bg-blue-50 border border-blue-200 text-blue-700'}`;
-    el.textContent = msg;
-    el.classList.remove('hidden');
-}
-
-function clearStatus() {
-    document.getElementById('statusBar').classList.add('hidden');
-}
-
 function buildLineObjects(changes) {
     const lines = [];
     let la = 1, lb = 1;
@@ -125,23 +165,19 @@ function buildLineObjects(changes) {
         const parts = ch.value.split('\n');
         if (parts[parts.length - 1] === '') parts.pop();
         for (const text of parts) {
-            if (ch.added) {
-                lines.push({ type: 'add', text, la: null, lb: lb++ });
-            } else if (ch.removed) {
-                lines.push({ type: 'remove', text, la: la++, lb: null });
-            } else {
-                lines.push({ type: 'context', text, la: la++, lb: lb++ });
-            }
+            if (ch.added)        lines.push({ type: 'add',     text, la: null, lb: lb++ });
+            else if (ch.removed) lines.push({ type: 'remove',  text, la: la++, lb: null });
+            else                 lines.push({ type: 'context', text, la: la++, lb: lb++ });
         }
     }
     return lines;
 }
 
-function buildVisibility(lines, contextLines) {
+function buildVisibility(lines, ctx) {
     const visible = new Array(lines.length).fill(false);
     lines.forEach((l, i) => {
         if (l.type !== 'context') {
-            for (let j = Math.max(0, i - contextLines); j <= Math.min(lines.length - 1, i + contextLines); j++) {
+            for (let j = Math.max(0, i - ctx); j <= Math.min(lines.length - 1, i + ctx); j++) {
                 visible[j] = true;
             }
         }
@@ -186,7 +222,7 @@ function attachExpandHandlers() {
     document.querySelectorAll('#diffOutput .collapsed-row').forEach(row => {
         row.addEventListener('click', () => {
             const start = parseInt(row.dataset.start);
-            const end = parseInt(row.dataset.end);
+            const end   = parseInt(row.dataset.end);
             let html = '';
             for (let k = start; k < end; k++) html += lineRow(currentLines[k]);
             row.insertAdjacentHTML('beforebegin', html);
@@ -195,28 +231,21 @@ function attachExpandHandlers() {
     });
 }
 
-async function compare() {
-    clearStatus();
+function compare() {
+    document.getElementById('compareError').classList.add('hidden');
     document.getElementById('results').classList.add('hidden');
 
-    const urlA = document.getElementById('urlA').value.trim();
-    const urlB = document.getElementById('urlB').value.trim();
+    let htmlA = document.getElementById('htmlA').value;
+    let htmlB = document.getElementById('htmlB').value;
     const pretty = document.getElementById('prettyPrint').checked;
     const ctx = Math.max(0, parseInt(document.getElementById('contextLines').value) || 3);
 
-    if (!urlA || !urlB) { setStatus('URL A と URL B を両方入力してください。', true); return; }
-
-    let htmlA, htmlB;
-
-    setStatus('URL A を取得中...');
-    try { htmlA = await fetchHtml(urlA); }
-    catch (e) { setStatus(`URL A の取得失敗: ${e.message}`, true); return; }
-
-    setStatus('URL B を取得中...');
-    try { htmlB = await fetchHtml(urlB); }
-    catch (e) { setStatus(`URL B の取得失敗: ${e.message}`, true); return; }
-
-    clearStatus();
+    if (!htmlA.trim() || !htmlB.trim()) {
+        const errEl = document.getElementById('compareError');
+        errEl.textContent = 'A・B 両方のHTMLが必要です。URLから取得するか、テキストエリアに貼り付けてください。';
+        errEl.classList.remove('hidden');
+        return;
+    }
 
     if (pretty) { htmlA = formatHtml(htmlA); htmlB = formatHtml(htmlB); }
 
@@ -224,9 +253,9 @@ async function compare() {
 
     let added = 0, removed = 0, unchanged = 0;
     for (const c of changes) {
-        if (c.added) added += c.count ?? 0;
-        else if (c.removed) removed += c.count ?? 0;
-        else unchanged += c.count ?? 0;
+        if (c.added)        added     += c.count ?? 0;
+        else if (c.removed) removed   += c.count ?? 0;
+        else                unchanged += c.count ?? 0;
     }
 
     const stats = document.getElementById('stats');
@@ -246,12 +275,13 @@ async function compare() {
     attachExpandHandlers();
 }
 
+document.getElementById('fetchA').addEventListener('click', () => handleFetch('A'));
+document.getElementById('fetchB').addEventListener('click', () => handleFetch('B'));
 document.getElementById('compareBtn').addEventListener('click', compare);
 
 document.getElementById('expandAll').addEventListener('click', () => {
     document.querySelectorAll('#diffOutput .collapsed-row').forEach(row => row.click());
 });
-
 document.getElementById('collapseAll').addEventListener('click', () => {
     const ctx = Math.max(0, parseInt(document.getElementById('contextLines').value) || 3);
     const visible = buildVisibility(currentLines, ctx);
