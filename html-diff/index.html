@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Diff Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
+    <style>
+        code, .mono { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
+        .line-add  { background: #d1fae5; }
+        .line-add  td.prefix { color: #059669; }
+        .line-remove { background: #fee2e2; }
+        .line-remove td.prefix { color: #dc2626; }
+        .line-context { background: #fff; }
+        .line-context td.prefix { color: #d1d5db; }
+        .collapsed-row { background: #f3f4f6; cursor: pointer; }
+        .collapsed-row:hover { background: #e5e7eb; }
+        tr:hover td { filter: brightness(0.97); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<div class="max-w-7xl mx-auto p-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-1">HTML Diff Tool</h1>
+    <p class="text-sm text-gray-500 mb-6">2つのURLのHTMLを取得して差分を表示します</p>
+
+    <!-- Input -->
+    <div class="bg-white rounded-xl shadow p-6 mb-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-600 mb-1">URL A <span class="text-red-500 font-normal">(比較元)</span></label>
+                <input type="url" id="urlA"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-600 mb-1">URL B <span class="text-green-600 font-normal">(比較先)</span></label>
+                <input type="url" id="urlB"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com/other">
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-5 mb-4 text-sm text-gray-600">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="prettyPrint" checked class="rounded accent-blue-600">
+                タグごとに改行してから比較
+            </label>
+            <label class="flex items-center gap-2">
+                コンテキスト行数:
+                <input type="number" id="contextLines" value="3" min="0" max="50"
+                    class="w-16 border border-gray-300 rounded px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </label>
+        </div>
+
+        <button id="compareBtn"
+            class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold px-6 py-2 rounded-lg transition-colors text-sm">
+            比較する
+        </button>
+    </div>
+
+    <!-- Status / Error -->
+    <div id="statusBar" class="hidden rounded-lg p-3 mb-4 text-sm"></div>
+
+    <!-- Results -->
+    <div id="results" class="hidden">
+        <div id="stats" class="bg-white rounded-xl shadow px-5 py-3 mb-4 text-sm flex flex-wrap gap-5 items-center"></div>
+
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="border-b border-gray-100 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-semibold text-gray-600 mono">diff</span>
+                <div class="flex gap-3 text-xs text-blue-600">
+                    <button id="expandAll" class="hover:underline">すべて展開</button>
+                    <button id="collapseAll" class="hover:underline">変更なし行を折りたたむ</button>
+                </div>
+            </div>
+            <div id="diffOutput" class="overflow-x-auto"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const PROXY = 'https://api.allorigins.win/raw?url=';
+
+let currentLines = [];
+
+async function fetchHtml(url) {
+    const res = await fetch(PROXY + encodeURIComponent(url));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+}
+
+function formatHtml(html) {
+    return html
+        .replace(/\r\n|\r/g, '\n')
+        .replace(/>\s*</g, '>\n<')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l.length > 0)
+        .join('\n');
+}
+
+function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function setStatus(msg, isError) {
+    const el = document.getElementById('statusBar');
+    el.className = `rounded-lg p-3 mb-4 text-sm ${isError
+        ? 'bg-red-50 border border-red-200 text-red-700'
+        : 'bg-blue-50 border border-blue-200 text-blue-700'}`;
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+
+function clearStatus() {
+    document.getElementById('statusBar').classList.add('hidden');
+}
+
+function buildLineObjects(changes) {
+    const lines = [];
+    let la = 1, lb = 1;
+    for (const ch of changes) {
+        const parts = ch.value.split('\n');
+        if (parts[parts.length - 1] === '') parts.pop();
+        for (const text of parts) {
+            if (ch.added) {
+                lines.push({ type: 'add', text, la: null, lb: lb++ });
+            } else if (ch.removed) {
+                lines.push({ type: 'remove', text, la: la++, lb: null });
+            } else {
+                lines.push({ type: 'context', text, la: la++, lb: lb++ });
+            }
+        }
+    }
+    return lines;
+}
+
+function buildVisibility(lines, contextLines) {
+    const visible = new Array(lines.length).fill(false);
+    lines.forEach((l, i) => {
+        if (l.type !== 'context') {
+            for (let j = Math.max(0, i - contextLines); j <= Math.min(lines.length - 1, i + contextLines); j++) {
+                visible[j] = true;
+            }
+        }
+    });
+    return visible;
+}
+
+function lineRow(line) {
+    const cls = line.type === 'add' ? 'line-add' : line.type === 'remove' ? 'line-remove' : 'line-context';
+    const pfx = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' ';
+    return `<tr class="${cls}">
+        <td class="px-2 py-px text-gray-400 text-right select-none border-r border-gray-100 w-10 mono text-xs">${line.la ?? ''}</td>
+        <td class="px-2 py-px text-gray-400 text-right select-none border-r border-gray-100 w-10 mono text-xs">${line.lb ?? ''}</td>
+        <td class="px-2 py-px prefix select-none border-r border-gray-100 w-5 text-center mono text-xs font-bold">${pfx}</td>
+        <td class="px-3 py-px whitespace-pre-wrap break-all mono text-xs">${esc(line.text)}</td>
+    </tr>`;
+}
+
+function renderTable(lines, visible) {
+    let html = '<table class="w-full border-collapse">';
+    let i = 0;
+    while (i < lines.length) {
+        if (visible[i]) {
+            html += lineRow(lines[i]);
+            i++;
+        } else {
+            let j = i;
+            while (j < lines.length && !visible[j]) j++;
+            html += `<tr class="collapsed-row" data-start="${i}" data-end="${j}">
+                <td colspan="4" class="px-3 py-1 text-center text-xs text-gray-500 mono">
+                    ··· ${j - i} 行（変更なし）— クリックで展開
+                </td>
+            </tr>`;
+            i = j;
+        }
+    }
+    html += '</table>';
+    return html;
+}
+
+function attachExpandHandlers() {
+    document.querySelectorAll('#diffOutput .collapsed-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const start = parseInt(row.dataset.start);
+            const end = parseInt(row.dataset.end);
+            let html = '';
+            for (let k = start; k < end; k++) html += lineRow(currentLines[k]);
+            row.insertAdjacentHTML('beforebegin', html);
+            row.remove();
+        });
+    });
+}
+
+async function compare() {
+    clearStatus();
+    document.getElementById('results').classList.add('hidden');
+
+    const urlA = document.getElementById('urlA').value.trim();
+    const urlB = document.getElementById('urlB').value.trim();
+    const pretty = document.getElementById('prettyPrint').checked;
+    const ctx = Math.max(0, parseInt(document.getElementById('contextLines').value) || 3);
+
+    if (!urlA || !urlB) { setStatus('URL A と URL B を両方入力してください。', true); return; }
+
+    let htmlA, htmlB;
+
+    setStatus('URL A を取得中...');
+    try { htmlA = await fetchHtml(urlA); }
+    catch (e) { setStatus(`URL A の取得失敗: ${e.message}`, true); return; }
+
+    setStatus('URL B を取得中...');
+    try { htmlB = await fetchHtml(urlB); }
+    catch (e) { setStatus(`URL B の取得失敗: ${e.message}`, true); return; }
+
+    clearStatus();
+
+    if (pretty) { htmlA = formatHtml(htmlA); htmlB = formatHtml(htmlB); }
+
+    const changes = Diff.diffLines(htmlA, htmlB);
+
+    let added = 0, removed = 0, unchanged = 0;
+    for (const c of changes) {
+        if (c.added) added += c.count ?? 0;
+        else if (c.removed) removed += c.count ?? 0;
+        else unchanged += c.count ?? 0;
+    }
+
+    const stats = document.getElementById('stats');
+    if (added === 0 && removed === 0) {
+        stats.innerHTML = '<span class="text-green-600 font-semibold">&#10003; 差分なし — 2つのHTMLは同一です</span>';
+    } else {
+        stats.innerHTML = `
+            <span class="text-red-600 font-semibold">&#8722; ${removed} 行削除</span>
+            <span class="text-green-700 font-semibold">&#43; ${added} 行追加</span>
+            <span class="text-gray-400">${unchanged} 行変更なし</span>`;
+    }
+
+    currentLines = buildLineObjects(changes);
+    const visible = buildVisibility(currentLines, ctx);
+    document.getElementById('diffOutput').innerHTML = renderTable(currentLines, visible);
+    document.getElementById('results').classList.remove('hidden');
+    attachExpandHandlers();
+}
+
+document.getElementById('compareBtn').addEventListener('click', compare);
+
+document.getElementById('expandAll').addEventListener('click', () => {
+    document.querySelectorAll('#diffOutput .collapsed-row').forEach(row => row.click());
+});
+
+document.getElementById('collapseAll').addEventListener('click', () => {
+    const ctx = Math.max(0, parseInt(document.getElementById('contextLines').value) || 3);
+    const visible = buildVisibility(currentLines, ctx);
+    document.getElementById('diffOutput').innerHTML = renderTable(currentLines, visible);
+    attachExpandHandlers();
+});
+
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') compare();
+});
+</script>
+
+</body>
+</html>

@@ -16,7 +16,8 @@
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/stick-figures)",
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/cat-animations)",
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/webgl-stick-figure)",
-      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/swaying-cards)"
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/swaying-cards)",
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/html-diff)"
     ],
     "additionalDirectories": [
       "/Users/ist/Projects/regepan.github.io",
