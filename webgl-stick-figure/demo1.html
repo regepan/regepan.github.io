@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo 1 — Classic Walk</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    color: #666;
+}
+h2 {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    color: #444;
+}
+canvas {
+    display: block;
+    border: 1px solid #181818;
+    max-width: 100%;
+}
+nav {
+    margin-top: 14px;
+    font-size: 11px;
+    display: flex;
+    gap: 24px;
+}
+nav a { color: #444; text-decoration: none; }
+nav a:hover { color: #999; }
+</style>
+</head>
+<body>
+<h2>Demo 01 — Classic Walk</h2>
+<canvas id="c" width="800" height="400"></canvas>
+<nav>
+    <a href="./">← Gallery</a>
+    <a href="demo2.html">Next: Neon Runner →</a>
+</nav>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl', { antialias: true });
+
+// ── Shader setup ──────────────────────────────────────────────────────────────
+function mkShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, `
+    attribute vec2 aPos;
+    uniform vec2 uRes;
+    void main() {
+        vec2 c = (aPos / uRes) * 2.0 - 1.0;
+        gl_Position = vec4(c.x, -c.y, 0.0, 1.0);
+    }
+`));
+gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, `
+    precision mediump float;
+    uniform vec4 uColor;
+    void main() { gl_FragColor = uColor; }
+`));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const aPos   = gl.getAttribLocation(prog, 'aPos');
+const uColor = gl.getUniformLocation(prog, 'uColor');
+const uRes   = gl.getUniformLocation(prog, 'uRes');
+const vbuf   = gl.createBuffer();
+const W = canvas.width, H = canvas.height;
+
+gl.uniform2f(uRes, W, H);
+gl.enable(gl.BLEND);
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+// ── Draw helpers ──────────────────────────────────────────────────────────────
+function color(r, g, b, a = 1) { gl.uniform4f(uColor, r, g, b, a); }
+
+function upload(verts, mode) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(mode, 0, verts.length / 2);
+}
+
+function line(x1, y1, x2, y2, t) {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+    if (len < 0.01) return;
+    const nx = -dy / len * t / 2, ny = dx / len * t / 2;
+    upload([x1+nx,y1+ny, x1-nx,y1-ny, x2+nx,y2+ny, x2-nx,y2-ny], gl.TRIANGLE_STRIP);
+}
+
+function circle(cx, cy, r, segs = 28) {
+    const v = [cx, cy];
+    for (let i = 0; i <= segs; i++) {
+        const a = i / segs * Math.PI * 2;
+        v.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    upload(v, gl.TRIANGLE_FAN);
+}
+
+function rect(x, y, w, h) {
+    upload([x,y, x+w,y, x,y+h, x+w,y+h], gl.TRIANGLE_STRIP);
+}
+
+// ── Stick figure pose ─────────────────────────────────────────────────────────
+function pose(x, y, sc, ph) {
+    const hr = sc * 0.13;
+    const bl = sc * 0.38;   // body length
+    const al = sc * 0.28;   // arm length
+    const ll = sc * 0.40;   // leg length
+
+    // Subtle vertical bob (body rises at mid-stride)
+    const bob = Math.abs(Math.sin(ph)) * sc * 0.025;
+
+    const hy = y - bob;           // hip y
+    const sy = hy - bl;           // shoulder y
+    const chy = sy - hr * 1.45;   // head center y
+
+    const la = Math.sin(ph) * 0.45;    // left leg angle
+    const ra = -la;                     // right leg angle
+    const laa = -la * 0.8;             // left arm (opposite to left leg)
+    const raa =  la * 0.8;             // right arm
+
+    return {
+        hr, hd: [x, chy],
+        body: [x, sy, x, hy],
+        ll: [x, hy,  x + Math.sin(la)*ll,  hy + Math.cos(la)*ll],
+        rl: [x, hy,  x + Math.sin(ra)*ll,  hy + Math.cos(ra)*ll],
+        la: [x, sy,  x + Math.sin(laa)*al, sy + Math.cos(laa)*al*0.72],
+        ra: [x, sy,  x + Math.sin(raa)*al, sy + Math.cos(raa)*al*0.72],
+    };
+}
+
+function drawFigure(p, t = 5) {
+    circle(...p.hd, p.hr);
+    line(...p.body, t);
+    line(...p.ll, t);
+    line(...p.rl, t);
+    line(...p.la, t);
+    line(...p.ra, t);
+}
+
+// ── Scene constants ───────────────────────────────────────────────────────────
+const SCALE = 120;
+const GROUND_Y = 362;
+const HIP_Y = GROUND_Y - SCALE * 0.40;  // feet touch ground when leg is straight
+const WALK_SPEED  = 130;  // px/s
+const PHASE_SPEED = 2.6;  // rad/s
+
+let x = 150, ph = 0, last = 0;
+
+// ── Draw background elements ──────────────────────────────────────────────────
+function drawBackground() {
+    // Sky gradient (faked with two rects)
+    color(0.04, 0.04, 0.05, 1);
+    rect(0, 0, W, H);
+
+    // Ground surface
+    color(0.14, 0.14, 0.14, 1);
+    rect(0, GROUND_Y, W, 2);
+
+    // Ground glow strip
+    color(0.10, 0.10, 0.10, 0.7);
+    rect(0, GROUND_Y + 2, W, 6);
+
+    // Subtle floor tiles (vertical separators)
+    color(0.09, 0.09, 0.09, 1);
+    for (let tx = 0; tx < W; tx += 80) {
+        rect(tx, GROUND_Y, 1, 20);
+    }
+}
+
+// ── Animation loop ────────────────────────────────────────────────────────────
+function frame(t) {
+    const dt = Math.min((t - last) / 1000, 0.05);
+    last = t;
+
+    x  += WALK_SPEED  * dt;
+    ph += PHASE_SPEED * dt;
+
+    // Loop back
+    if (x > W + 80) x = -80;
+
+    gl.clearColor(0.04, 0.04, 0.05, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    drawBackground();
+
+    // Shadow (ellipse approximation using a flat oval)
+    const shadowW = SCALE * 0.28;
+    const shadowAlpha = 0.35;
+    color(0, 0, 0, shadowAlpha);
+    for (let i = 5; i >= 1; i--) {
+        circle(x, GROUND_Y + 4, shadowW * i * 0.22, 16);
+    }
+
+    // Figure
+    const fig = pose(x, HIP_Y, SCALE, ph);
+    color(0.92, 0.92, 0.93, 1);
+    drawFigure(fig, 5);
+
+    requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(t0 => { last = t0; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

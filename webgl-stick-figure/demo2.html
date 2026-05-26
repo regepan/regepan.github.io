@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo 2 — Neon Runner</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+}
+h2 {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    color: #0ff4;
+}
+canvas {
+    display: block;
+    border: 1px solid #0a1a18;
+    max-width: 100%;
+}
+nav {
+    margin-top: 14px;
+    font-size: 11px;
+    display: flex;
+    gap: 24px;
+}
+nav a { color: #0ff3; text-decoration: none; }
+nav a:hover { color: #0ff; }
+</style>
+</head>
+<body>
+<h2>Demo 02 — Neon Runner</h2>
+<canvas id="c" width="800" height="420"></canvas>
+<nav>
+    <a href="demo1.html">← Classic Walk</a>
+    <a href="./">Gallery</a>
+    <a href="demo3.html">Next: Crowd →</a>
+</nav>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl', { antialias: true, premultipliedAlpha: false });
+
+// ── Shader setup ──────────────────────────────────────────────────────────────
+function mkShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, `
+    attribute vec2 aPos;
+    uniform vec2 uRes;
+    void main() {
+        vec2 c = (aPos / uRes) * 2.0 - 1.0;
+        gl_Position = vec4(c.x, -c.y, 0.0, 1.0);
+    }
+`));
+gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, `
+    precision mediump float;
+    uniform vec4 uColor;
+    void main() { gl_FragColor = uColor; }
+`));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const aPos   = gl.getAttribLocation(prog, 'aPos');
+const uColor = gl.getUniformLocation(prog, 'uColor');
+const uRes   = gl.getUniformLocation(prog, 'uRes');
+const vbuf   = gl.createBuffer();
+const W = canvas.width, H = canvas.height;
+
+gl.uniform2f(uRes, W, H);
+gl.enable(gl.BLEND);
+
+// ── Draw helpers ──────────────────────────────────────────────────────────────
+function color(r, g, b, a = 1) { gl.uniform4f(uColor, r, g, b, a); }
+
+function upload(verts, mode) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(mode, 0, verts.length / 2);
+}
+
+function line(x1, y1, x2, y2, t) {
+    const dx = x2-x1, dy = y2-y1, len = Math.hypot(dx, dy);
+    if (len < 0.01) return;
+    const nx = -dy/len*t/2, ny = dx/len*t/2;
+    upload([x1+nx,y1+ny, x1-nx,y1-ny, x2+nx,y2+ny, x2-nx,y2-ny], gl.TRIANGLE_STRIP);
+}
+
+function circle(cx, cy, r, segs = 28) {
+    const v = [cx, cy];
+    for (let i = 0; i <= segs; i++) {
+        const a = i/segs*Math.PI*2;
+        v.push(cx+Math.cos(a)*r, cy+Math.sin(a)*r);
+    }
+    upload(v, gl.TRIANGLE_FAN);
+}
+
+function rect(x, y, w, h) {
+    upload([x,y, x+w,y, x,y+h, x+w,y+h], gl.TRIANGLE_STRIP);
+}
+
+// ── Running pose with joints (knee + elbow) ───────────────────────────────────
+function runPose(x, y, sc, ph) {
+    const hr    = sc * 0.13;
+    const bodyL = sc * 0.33;
+    const thL   = sc * 0.22;   // thigh length
+    const shL   = sc * 0.22;   // shin length
+    const uaL   = sc * 0.18;   // upper arm length
+    const faL   = sc * 0.17;   // forearm length
+    const lean  = 0.13;         // forward lean angle
+
+    const bob = Math.abs(Math.sin(ph)) * sc * 0.038;
+    const hy = y - bob;
+
+    // Shoulder (leaned forward)
+    const sx = x + bodyL * Math.sin(lean);
+    const sy = hy - bodyL * Math.cos(lean);
+    const hdx = sx, hdy = sy - hr * 1.5;
+
+    // ── Legs ──
+    // Left leg
+    const lta = Math.sin(ph) * 0.72;
+    const lkb = Math.max(0, -Math.sin(ph)) * 0.95;
+    const lkx = x + Math.sin(lta) * thL,  lky = hy + Math.cos(lta) * thL;
+    const lfx = lkx + Math.sin(lta-lkb) * shL, lfy = lky + Math.cos(lta-lkb) * shL;
+
+    // Right leg
+    const rta = Math.sin(ph + Math.PI) * 0.72;
+    const rkb = Math.max(0, -Math.sin(ph + Math.PI)) * 0.95;
+    const rkx = x + Math.sin(rta) * thL,  rky = hy + Math.cos(rta) * thL;
+    const rfx = rkx + Math.sin(rta-rkb) * shL, rfy = rky + Math.cos(rta-rkb) * shL;
+
+    // ── Arms ──
+    // Left arm (opposite phase to left leg)
+    const luaa = Math.sin(ph + Math.PI) * 0.68;
+    const lex = sx + Math.sin(luaa) * uaL;
+    const ley = sy + Math.cos(luaa) * uaL * 0.72;
+    const lhx = lex + Math.sin(luaa + 0.55) * faL;
+    const lhy = ley + Math.cos(luaa + 0.55) * faL * 0.72;
+
+    // Right arm
+    const ruaa = Math.sin(ph) * 0.68;
+    const rex = sx + Math.sin(ruaa) * uaL;
+    const rey = sy + Math.cos(ruaa) * uaL * 0.72;
+    const rhx = rex + Math.sin(ruaa - 0.55) * faL;
+    const rhy = rey + Math.cos(ruaa - 0.55) * faL * 0.72;
+
+    return {
+        hr, hd: [hdx, hdy],
+        body: [sx, sy, x, hy],
+        // Jointed limbs: each is two segments [from, mid, to]
+        ll: [x, hy, lkx, lky, lfx, lfy],
+        rl: [x, hy, rkx, rky, rfx, rfy],
+        la: [sx, sy, lex, ley, lhx, lhy],
+        ra: [sx, sy, rex, rey, rhx, rhy],
+    };
+}
+
+function drawRunFigure(p, t) {
+    circle(...p.hd, p.hr);
+    line(...p.body, t);
+    // Each jointed limb: two segments sharing the middle joint
+    for (const seg of [p.ll, p.rl, p.la, p.ra]) {
+        line(seg[0],seg[1], seg[2],seg[3], t);
+        line(seg[2],seg[3], seg[4],seg[5], t);
+    }
+}
+
+// Neon glow: multiple passes with additive blending
+function drawNeonFigure(p, cr, cg, cb, baseT) {
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);  // additive
+
+    color(cr, cg, cb, 0.03);  drawRunFigure(p, baseT * 7);
+    color(cr, cg, cb, 0.08);  drawRunFigure(p, baseT * 4);
+    color(cr, cg, cb, 0.22);  drawRunFigure(p, baseT * 2.2);
+    color(cr, cg, cb, 0.7);   drawRunFigure(p, baseT * 1.3);
+    color(cr, cg, cb, 1.0);   drawRunFigure(p, baseT);
+
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);  // normal
+}
+
+// ── Grid background ───────────────────────────────────────────────────────────
+function drawGrid() {
+    color(0, 0.06, 0.06, 1);
+    const step = 40;
+    for (let gx = 0; gx < W; gx += step) {
+        rect(gx, 0, 1, H);
+    }
+    for (let gy = 0; gy < H; gy += step) {
+        rect(0, gy, W, 1);
+    }
+}
+
+// ── Ground line ───────────────────────────────────────────────────────────────
+function drawGround(gy) {
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    // Glow line
+    color(0, 0.8, 0.7, 0.06);
+    rect(0, gy - 3, W, 7);
+    color(0, 1.0, 0.9, 0.15);
+    rect(0, gy - 1, W, 3);
+    color(0, 1.0, 0.9, 0.5);
+    rect(0, gy, W, 1);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+}
+
+// ── Scene constants ───────────────────────────────────────────────────────────
+const SCALE = 112;
+const GROUND_Y = 370;
+const HIP_Y = GROUND_Y - SCALE * 0.38;
+const RUN_SPEED   = 210;  // px/s
+const PHASE_SPEED = 4.8;  // rad/s — running is fast
+
+// Ghost trail: store past positions
+const TRAIL_MAX = 10;
+const trail = [];
+
+let fx = 200, ph = 0, last = 0;
+
+// ── Animation loop ────────────────────────────────────────────────────────────
+function frame(t) {
+    const dt = Math.min((t - last) / 1000, 0.05);
+    last = t;
+
+    fx += RUN_SPEED  * dt;
+    ph += PHASE_SPEED * dt;
+
+    if (fx > W + 80) fx = -80;
+
+    // Store trail snapshot (every frame, capped)
+    trail.push({ x: fx, ph });
+    if (trail.length > TRAIL_MAX) trail.shift();
+
+    // Clear
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    drawGrid();
+    drawGround(GROUND_Y);
+
+    // Draw ghost trail (oldest → newest, increasing opacity)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    for (let i = 0; i < trail.length - 1; i++) {
+        const norm = i / (trail.length - 1);
+        const tp = runPose(trail[i].x, HIP_Y, SCALE, trail[i].ph);
+        color(0, 1.0, 0.88, norm * 0.09);
+        drawRunFigure(tp, 3);
+    }
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    // Main figure with neon glow
+    const fig = runPose(fx, HIP_Y, SCALE, ph);
+    drawNeonFigure(fig, 0, 1.0, 0.88, 4);
+
+    requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(t0 => { last = t0; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>
