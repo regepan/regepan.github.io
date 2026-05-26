@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>猫アニメーション</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: sans-serif;
+      color: #eee;
+      gap: 48px;
+      padding: 40px 20px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      letter-spacing: 0.1em;
+      color: #f4c2c2;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      justify-content: center;
+    }
+    .card {
+      background: #16213e;
+      border-radius: 20px;
+      padding: 28px 32px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      min-width: 260px;
+    }
+    .card h2 {
+      font-size: 1rem;
+      color: #a8d8ea;
+      letter-spacing: 0.05em;
+    }
+    .stage {
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* =====================
+       1. 歩く猫
+    ===================== */
+    .walk-stage {
+      width: 320px;
+      height: 140px;
+      background: linear-gradient(to bottom, #0f3460 70%, #533483 70%);
+      border-radius: 12px;
+    }
+    .walk-cat {
+      position: absolute;
+      bottom: 28px;
+      animation: walk-move 4s linear infinite;
+    }
+    @keyframes walk-move {
+      0%   { left: -80px; }
+      100% { left: 340px; }
+    }
+    /* 足の動き */
+    .leg-fl { transform-origin: 8px 0; animation: leg-swing 0.4s ease-in-out infinite alternate; }
+    .leg-rl { transform-origin: 8px 0; animation: leg-swing 0.4s ease-in-out infinite alternate-reverse; }
+    .leg-fr { transform-origin: 8px 0; animation: leg-swing-b 0.4s ease-in-out infinite alternate; }
+    .leg-rr { transform-origin: 8px 0; animation: leg-swing-b 0.4s ease-in-out infinite alternate-reverse; }
+    @keyframes leg-swing   { from { rotate: -22deg; } to { rotate: 22deg; } }
+    @keyframes leg-swing-b { from { rotate: 22deg;  } to { rotate: -22deg; } }
+    /* 尻尾 */
+    .tail { transform-origin: 0 0; animation: tail-wag 0.8s ease-in-out infinite alternate; }
+    @keyframes tail-wag { from { rotate: -15deg; } to { rotate: 15deg; } }
+    /* 耳 */
+    .ear-twitch { animation: ear-t 3s ease-in-out infinite; }
+    @keyframes ear-t {
+      0%,90%,100% { transform: scaleY(1); }
+      95% { transform: scaleY(0.6); }
+    }
+
+    /* =====================
+       2. 眠る猫
+    ===================== */
+    .sleep-stage {
+      width: 260px;
+      height: 160px;
+      background: linear-gradient(135deg, #1f2940, #2a1f40);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sleep-cat { position: relative; }
+    /* お腹の呼吸 */
+    .belly { transform-origin: 50% 100%; animation: breathe 3s ease-in-out infinite; }
+    @keyframes breathe {
+      0%,100% { transform: scaleY(1) scaleX(1); }
+      50%      { transform: scaleY(1.08) scaleX(1.04); }
+    }
+    /* zzz */
+    .zzz { animation: zzz-float 3s ease-in-out infinite; }
+    .zzz text:nth-child(1) { animation: zzz-fade 3s 0s ease-in-out infinite; }
+    .zzz text:nth-child(2) { animation: zzz-fade 3s 1s ease-in-out infinite; }
+    .zzz text:nth-child(3) { animation: zzz-fade 3s 2s ease-in-out infinite; }
+    @keyframes zzz-float {
+      0%   { transform: translateY(0); }
+      100% { transform: translateY(-10px); }
+    }
+    @keyframes zzz-fade {
+      0%,100% { opacity: 0; transform: translateY(0) scale(0.8); }
+      30%,70% { opacity: 1; transform: translateY(-6px) scale(1); }
+    }
+    /* 尻尾ゆれ */
+    .sleep-tail { transform-origin: 2px 2px; animation: sleep-tail-sway 4s ease-in-out infinite alternate; }
+    @keyframes sleep-tail-sway { from { rotate: -10deg; } to { rotate: 20deg; } }
+
+    /* =====================
+       3. 遊ぶ猫
+    ===================== */
+    .play-stage {
+      width: 320px;
+      height: 180px;
+      background: linear-gradient(to bottom, #0d2137 65%, #1a4a2e 65%);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    /* ボール */
+    .ball {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ff9f43, #ee5a24);
+      bottom: 28px;
+      animation: ball-bounce 1.8s ease-in-out infinite;
+    }
+    @keyframes ball-bounce {
+      0%   { left: 30px;  bottom: 28px; }
+      25%  { left: 100px; bottom: 90px; }
+      50%  { left: 175px; bottom: 28px; }
+      75%  { left: 240px; bottom: 90px; }
+      100% { left: 30px;  bottom: 28px; }
+    }
+    /* ボールの影 */
+    .ball-shadow {
+      position: absolute;
+      width: 14px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.3);
+      animation: shadow-move 1.8s ease-in-out infinite;
+    }
+    @keyframes shadow-move {
+      0%   { left: 33px;  bottom: 24px; transform: scaleX(1); }
+      25%  { left: 103px; bottom: 24px; transform: scaleX(0.4); }
+      50%  { left: 178px; bottom: 24px; transform: scaleX(1); }
+      75%  { left: 243px; bottom: 24px; transform: scaleX(0.4); }
+      100% { left: 33px;  bottom: 24px; transform: scaleX(1); }
+    }
+    /* 遊ぶ猫本体 */
+    .play-cat {
+      position: absolute;
+      bottom: 24px;
+      animation: cat-chase 1.8s ease-in-out infinite;
+    }
+    @keyframes cat-chase {
+      0%   { left: 60px;  transform: scaleX(1); }
+      25%  { left: 120px; transform: scaleX(1); }
+      50%  { left: 195px; transform: scaleX(1); }
+      51%  { left: 195px; transform: scaleX(-1); }
+      75%  { left: 120px; transform: scaleX(-1); }
+      99%  { left: 65px;  transform: scaleX(-1); }
+      100% { left: 60px;  transform: scaleX(1); }
+    }
+    /* 猫のジャンプ */
+    .play-cat-body {
+      animation: cat-jump 1.8s ease-in-out infinite;
+    }
+    @keyframes cat-jump {
+      0%,100% { transform: translateY(0) rotate(0deg); }
+      25%      { transform: translateY(-32px) rotate(-15deg); }
+      50%      { transform: translateY(0) rotate(0deg); }
+      75%      { transform: translateY(-32px) rotate(15deg); }
+    }
+    /* 前足（攻撃） */
+    .paw-attack { transform-origin: 4px 4px; animation: paw-reach 1.8s ease-in-out infinite; }
+    @keyframes paw-reach {
+      0%,100% { rotate: 0deg; }
+      20%,70% { rotate: -50deg; }
+      50%     { rotate: 0deg; }
+    }
+  </style>
+</head>
+<body>
+  <h1>猫アニメーション 🐱</h1>
+  <div class="cards">
+
+    <!-- 1. 歩く猫 -->
+    <div class="card">
+      <h2>歩く猫</h2>
+      <div class="stage walk-stage">
+        <div class="walk-cat">
+          <svg width="80" height="70" viewBox="0 0 80 70">
+            <!-- 尻尾 -->
+            <g class="tail" transform="translate(68,30)">
+              <path d="M0,0 Q10,-18 8,-32" stroke="#e8b89a" stroke-width="4" fill="none" stroke-linecap="round"/>
+            </g>
+            <!-- 胴体 -->
+            <ellipse cx="40" cy="38" rx="26" ry="16" fill="#e8b89a"/>
+            <!-- 頭 -->
+            <circle cx="14" cy="26" r="14" fill="#e8b89a"/>
+            <!-- 耳 -->
+            <g class="ear-twitch">
+              <polygon points="5,14 10,2 18,14" fill="#e8b89a"/>
+              <polygon points="7,13 10,5 16,13" fill="#ffb3ba"/>
+              <polygon points="18,14 23,2 28,14" fill="#e8b89a"/>
+              <polygon points="20,13 23,5 26,13" fill="#ffb3ba"/>
+            </g>
+            <!-- 目 -->
+            <ellipse cx="10" cy="25" rx="2.5" ry="2.5" fill="#333"/>
+            <ellipse cx="18" cy="25" rx="2.5" ry="2.5" fill="#333"/>
+            <circle cx="11" cy="24" r="0.8" fill="white"/>
+            <circle cx="19" cy="24" r="0.8" fill="white"/>
+            <!-- 鼻 -->
+            <polygon points="14,29 12.5,31 15.5,31" fill="#ff9999"/>
+            <!-- ヒゲ -->
+            <line x1="0"  y1="30" x2="10" y2="29" stroke="#ccc" stroke-width="0.8"/>
+            <line x1="0"  y1="32" x2="10" y2="32" stroke="#ccc" stroke-width="0.8"/>
+            <line x1="18" y1="29" x2="28" y2="30" stroke="#ccc" stroke-width="0.8"/>
+            <line x1="18" y1="32" x2="28" y2="32" stroke="#ccc" stroke-width="0.8"/>
+            <!-- 前左足 -->
+            <g class="leg-fl" transform="translate(18,50)">
+              <rect x="-4" y="0" width="8" height="18" rx="4" fill="#e8b89a"/>
+            </g>
+            <!-- 前右足 -->
+            <g class="leg-fr" transform="translate(28,50)">
+              <rect x="-4" y="0" width="8" height="18" rx="4" fill="#d4a882"/>
+            </g>
+            <!-- 後左足 -->
+            <g class="leg-rl" transform="translate(52,50)">
+              <rect x="-4" y="0" width="8" height="18" rx="4" fill="#e8b89a"/>
+            </g>
+            <!-- 後右足 -->
+            <g class="leg-rr" transform="translate(62,50)">
+              <rect x="-4" y="0" width="8" height="18" rx="4" fill="#d4a882"/>
+            </g>
+          </svg>
+        </div>
+        <!-- 地面の線 -->
+        <svg style="position:absolute;bottom:0;left:0;width:100%;height:28px">
+          <line x1="0" y1="4" x2="320" y2="4" stroke="#533483" stroke-width="1" stroke-dasharray="8 6" opacity="0.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 2. 眠る猫 -->
+    <div class="card">
+      <h2>眠る猫</h2>
+      <div class="stage sleep-stage">
+        <svg class="sleep-cat" width="200" height="120" viewBox="0 0 200 120">
+          <!-- 影 -->
+          <ellipse cx="100" cy="108" rx="70" ry="8" fill="rgba(0,0,0,0.25)"/>
+          <!-- お腹（丸まった体） -->
+          <g class="belly">
+            <ellipse cx="100" cy="88" rx="62" ry="28" fill="#e8b89a"/>
+            <!-- 模様 -->
+            <ellipse cx="80" cy="90" rx="14" ry="10" fill="#d4a882" opacity="0.5"/>
+            <ellipse cx="110" cy="86" rx="10" ry="8" fill="#d4a882" opacity="0.4"/>
+          </g>
+          <!-- 尻尾 -->
+          <g class="sleep-tail" transform="translate(155,90)">
+            <path d="M0,0 Q22,0 24,-18 Q26,-36 14,-40" stroke="#e8b89a" stroke-width="6" fill="none" stroke-linecap="round"/>
+          </g>
+          <!-- 頭 -->
+          <circle cx="52" cy="78" r="26" fill="#e8b89a"/>
+          <!-- 耳 -->
+          <polygon points="36,58 40,42 52,57" fill="#e8b89a"/>
+          <polygon points="38,57 41,47 50,56" fill="#ffb3ba"/>
+          <polygon points="56,57 64,42 68,58" fill="#e8b89a"/>
+          <polygon points="58,56 64,47 66,57" fill="#ffb3ba"/>
+          <!-- 閉じた目 -->
+          <path d="M42,76 Q46,73 50,76" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M54,76 Q58,73 62,76" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- 鼻 -->
+          <polygon points="52,82 49.5,85 54.5,85" fill="#ff9999"/>
+          <!-- 口 -->
+          <path d="M52,85 Q48,89 46,88" stroke="#b88" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M52,85 Q56,89 58,88" stroke="#b88" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <!-- ヒゲ -->
+          <line x1="24" y1="80" x2="46" y2="81" stroke="#ccc" stroke-width="0.8"/>
+          <line x1="24" y1="84" x2="46" y2="84" stroke="#ccc" stroke-width="0.8"/>
+          <line x1="58" y1="81" x2="80" y2="80" stroke="#ccc" stroke-width="0.8"/>
+          <line x1="58" y1="84" x2="80" y2="84" stroke="#ccc" stroke-width="0.8"/>
+          <!-- 前足 -->
+          <ellipse cx="78" cy="105" rx="18" ry="8" fill="#e8b89a"/>
+          <ellipse cx="110" cy="107" rx="15" ry="7" fill="#d4a882"/>
+          <!-- ZZZ -->
+          <g class="zzz" transform="translate(72,20)">
+            <text x="0"  y="30" font-size="14" fill="#a8d8ea" font-weight="bold" opacity="0">z</text>
+            <text x="12" y="18" font-size="18" fill="#a8d8ea" font-weight="bold" opacity="0">z</text>
+            <text x="28" y="4"  font-size="22" fill="#a8d8ea" font-weight="bold" opacity="0">Z</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 3. 遊ぶ猫 -->
+    <div class="card">
+      <h2>遊ぶ猫</h2>
+      <div class="stage play-stage">
+        <!-- ボールの影 -->
+        <div class="ball-shadow"></div>
+        <!-- ボール -->
+        <div class="ball"></div>
+        <!-- 猫 -->
+        <div class="play-cat">
+          <div class="play-cat-body">
+            <svg width="64" height="72" viewBox="0 0 64 72">
+              <!-- 尻尾 -->
+              <path d="M50,40 Q68,30 62,16" stroke="#e8b89a" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <!-- 胴体 -->
+              <ellipse cx="30" cy="48" rx="20" ry="14" fill="#e8b89a"/>
+              <!-- 頭 -->
+              <circle cx="18" cy="28" r="16" fill="#e8b89a"/>
+              <!-- 耳（立ってる） -->
+              <polygon points="8,16 13,2 20,16"  fill="#e8b89a"/>
+              <polygon points="10,15 13,6 18,15" fill="#ffb3ba"/>
+              <polygon points="20,14 26,2 32,15" fill="#e8b89a"/>
+              <polygon points="22,14 26,6 30,14" fill="#ffb3ba"/>
+              <!-- 目（丸く興奮） -->
+              <circle cx="12" cy="27" r="4" fill="black"/>
+              <circle cx="24" cy="27" r="4" fill="black"/>
+              <circle cx="13.5" cy="25.5" r="1.5" fill="white"/>
+              <circle cx="25.5" cy="25.5" r="1.5" fill="white"/>
+              <!-- 鼻 -->
+              <polygon points="18,33 16,36 20,36" fill="#ff9999"/>
+              <!-- ヒゲ -->
+              <line x1="2"  y1="32" x2="14" y2="32" stroke="#ccc" stroke-width="0.8"/>
+              <line x1="2"  y1="35" x2="14" y2="35" stroke="#ccc" stroke-width="0.8"/>
+              <line x1="22" y1="32" x2="34" y2="32" stroke="#ccc" stroke-width="0.8"/>
+              <line x1="22" y1="35" x2="34" y2="35" stroke="#ccc" stroke-width="0.8"/>
+              <!-- 前足（攻撃中） -->
+              <g class="paw-attack" transform="translate(8,42)">
+                <rect x="-4" y="0" width="8" height="20" rx="4" fill="#e8b89a"/>
+                <!-- 肉球 -->
+                <ellipse cx="0" cy="21" rx="4" ry="3" fill="#ffb3ba"/>
+              </g>
+              <!-- もう一方の前足 -->
+              <g transform="translate(22,44)">
+                <rect x="-4" y="0" width="8" height="16" rx="4" fill="#d4a882"/>
+              </g>
+              <!-- 後足 -->
+              <g transform="translate(36,54)">
+                <rect x="-4" y="0" width="8" height="14" rx="4" fill="#e8b89a"/>
+              </g>
+              <g transform="translate(46,54)">
+                <rect x="-4" y="0" width="8" height="14" rx="4" fill="#d4a882"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <!-- 草 -->
+        <svg style="position:absolute;bottom:0;left:0;width:100%;height:30px" viewBox="0 0 320 30">
+          <rect x="0" y="10" width="320" height="20" fill="#1a4a2e"/>
+          <ellipse cx="20"  cy="10" rx="10" ry="5" fill="#2d6a4f"/>
+          <ellipse cx="60"  cy="10" rx="12" ry="5" fill="#2d6a4f"/>
+          <ellipse cx="110" cy="10" rx="9"  ry="5" fill="#2d6a4f"/>
+          <ellipse cx="170" cy="10" rx="11" ry="5" fill="#2d6a4f"/>
+          <ellipse cx="230" cy="10" rx="10" ry="5" fill="#2d6a4f"/>
+          <ellipse cx="290" cy="10" rx="12" ry="5" fill="#2d6a4f"/>
+        </svg>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
