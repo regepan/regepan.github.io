@@ -192,15 +192,9 @@ const stage = document.getElementById('stage');
 const countLabel = document.getElementById('count-label');
 
 // --- Popup data store ---
-let popups = [];     // { id, el, x, y, w, h, vx, vy }
+let popups = [];     // { id, el, x, y, w, h, vx, vy, pinned }
 let nextId = 1;
 let animFrameId = null;
-
-const PADDING = 8;      // gap to maintain between popups
-const DAMPING = 0.6;    // velocity damping per frame
-const PUSH_STRENGTH = 0.5; // force multiplier
-const MAX_V = 18;       // max velocity per frame
-const SETTLE_V = 0.3;   // below this, stop animating
 
 // Popup content templates
 const templates = [
@@ -292,78 +286,109 @@ function applyPos(p) {
   p.el.style.top  = p.y + 'px';
 }
 
-// --- Physics loop ---
+// --- Physics loop (Position-Based Dynamics) ---
+const GAP       = 10;   // minimum gap between popups
+const DAMPING   = 0.78; // velocity decay per frame
+const ITERATIONS = 20;  // constraint solve iterations per frame
+const VEL_BIAS  = 0.18; // fraction of position correction fed back as velocity
+const SETTLE_V  = 0.08; // stop loop below this speed
+
 function startLoop() {
   if (animFrameId) return;
   animFrameId = requestAnimationFrame(tick);
+}
+
+// Returns true if the pair overlapped and was corrected.
+function resolveOverlapPair(a, b) {
+  const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + GAP;
+  const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + GAP;
+  if (ox <= 0 || oy <= 0) return false;
+
+  const aMoves = !a.pinned;
+  const bMoves = !b.pinned;
+  if (!aMoves && !bMoves) return false;
+
+  // Weight: each free popup takes half; pinned popup forces the other to take all.
+  const wA = aMoves ? (bMoves ? 0.5 : 1.0) : 0.0;
+  const wB = bMoves ? (aMoves ? 0.5 : 1.0) : 0.0;
+
+  if (ox <= oy) {
+    // Separate along X (minimum penetration axis)
+    const dir = (a.x + a.w / 2 >= b.x + b.w / 2) ? 1 : -1;
+    a.x += dir * ox * wA;
+    b.x -= dir * ox * wB;
+  } else {
+    // Separate along Y
+    const dir = (a.y + a.h / 2 >= b.y + b.h / 2) ? 1 : -1;
+    a.y += dir * oy * wA;
+    b.y -= dir * oy * wB;
+  }
+  return true;
+}
+
+function checkAnyOverlap() {
+  for (let i = 0; i < popups.length; i++) {
+    for (let j = i + 1; j < popups.length; j++) {
+      const a = popups[i], b = popups[j];
+      const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + GAP;
+      const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + GAP;
+      if (ox > 0 && oy > 0) return true;
+    }
+  }
+  return false;
 }
 
 function tick() {
   const stageW = stage.clientWidth;
   const stageH = stage.clientHeight;
 
-  let anyMoving = false;
-
-  // Resolve overlaps: push pairs apart
-  for (let i = 0; i < popups.length; i++) {
-    for (let j = i + 1; j < popups.length; j++) {
-      const a = popups[i];
-      const b = popups[j];
-      if (a.pinned && b.pinned) continue;
-
-      // AABB overlap check with padding
-      const gap = PADDING;
-      const ax1 = a.x - gap, ax2 = a.x + a.w + gap;
-      const ay1 = a.y - gap, ay2 = a.y + a.h + gap;
-      const bx1 = b.x,       bx2 = b.x + b.w;
-      const by1 = b.y,       by2 = b.y + b.h;
-
-      const overlapX = Math.min(ax2, bx2) - Math.max(ax1, bx1);
-      const overlapY = Math.min(ay2, by2) - Math.max(ay1, by1);
-
-      if (overlapX <= 0 || overlapY <= 0) continue;
-
-      // Push along axis of minimum penetration
-      let fx = 0, fy = 0;
-      if (overlapX < overlapY) {
-        fx = (a.x + a.w / 2 < b.x + b.w / 2) ? -overlapX : overlapX;
-      } else {
-        fy = (a.y + a.h / 2 < b.y + b.h / 2) ? -overlapY : overlapY;
-      }
-
-      const force = PUSH_STRENGTH;
-      if (!a.pinned) { a.vx -= fx * force; a.vy -= fy * force; }
-      if (!b.pinned) { b.vx += fx * force; b.vy += fy * force; }
-    }
-  }
-
-  // Integrate positions, dampen, clamp
+  // 1. Apply velocity + damping
   for (const p of popups) {
     if (p.pinned) continue;
-
-    p.vx = Math.max(-MAX_V, Math.min(MAX_V, p.vx)) * DAMPING;
-    p.vy = Math.max(-MAX_V, Math.min(MAX_V, p.vy)) * DAMPING;
-
-    if (Math.abs(p.vx) < 0.01) p.vx = 0;
-    if (Math.abs(p.vy) < 0.01) p.vy = 0;
-
+    p.vx *= DAMPING;
+    p.vy *= DAMPING;
+    if (Math.abs(p.vx) < 0.005) p.vx = 0;
+    if (Math.abs(p.vy) < 0.005) p.vy = 0;
     p.x += p.vx;
     p.y += p.vy;
-
-    // Keep within stage
-    if (p.x < 0) { p.x = 0; p.vx *= -0.3; }
-    if (p.y < 0) { p.y = 0; p.vy *= -0.3; }
-    if (p.x + p.w > stageW) { p.x = stageW - p.w; p.vx *= -0.3; }
-    if (p.y + p.h > stageH) { p.y = stageH - p.h; p.vy *= -0.3; }
-
-    applyPos(p);
-
-    if (Math.abs(p.vx) > SETTLE_V || Math.abs(p.vy) > SETTLE_V) {
-      anyMoving = true;
-    }
   }
 
-  if (anyMoving) {
+  // 2. Snapshot positions before constraint solve
+  const preX = popups.map(p => p.x);
+  const preY = popups.map(p => p.y);
+
+  // 3. Iterative position-based constraint resolution
+  for (let iter = 0; iter < ITERATIONS; iter++) {
+    let anyOverlap = false;
+    for (let i = 0; i < popups.length; i++) {
+      for (let j = i + 1; j < popups.length; j++) {
+        if (resolveOverlapPair(popups[i], popups[j])) anyOverlap = true;
+      }
+    }
+    if (!anyOverlap) break;
+  }
+
+  // 4. Clamp to stage bounds
+  for (const p of popups) {
+    if (p.pinned) continue;
+    p.x = Math.max(0, Math.min(stageW - p.w, p.x));
+    p.y = Math.max(0, Math.min(stageH - p.h, p.y));
+  }
+
+  // 5. Derive velocity from position correction so motion looks smooth
+  for (let k = 0; k < popups.length; k++) {
+    const p = popups[k];
+    if (p.pinned) continue;
+    p.vx += (p.x - preX[k]) * VEL_BIAS;
+    p.vy += (p.y - preY[k]) * VEL_BIAS;
+  }
+
+  // 6. Render
+  for (const p of popups) applyPos(p);
+
+  // 7. Continue loop while popups are moving or overlapping
+  const anyMoving = popups.some(p => !p.pinned && (Math.abs(p.vx) > SETTLE_V || Math.abs(p.vy) > SETTLE_V));
+  if (anyMoving || checkAnyOverlap()) {
     animFrameId = requestAnimationFrame(tick);
   } else {
     animFrameId = null;
@@ -411,7 +436,6 @@ function bindDrag(el, data) {
   function onTouchMove(e) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); }
 
   function move(mx, my) {
-    const stageRect = stage.getBoundingClientRect();
     const dx = mx - startMX;
     const dy = my - startMY;
     data.x = Math.min(Math.max(startX + dx, 0), stage.clientWidth  - data.w);
