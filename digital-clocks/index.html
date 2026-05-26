@@ -3,180 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Clocks</title>
+  <title>Digital Dot Clocks</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      background: #0e0e0e;
+      background: #080808;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 60px;
-      padding: 48px 20px;
+      gap: 70px;
+      padding: 50px 20px;
       font-family: sans-serif;
     }
+    .clock-section { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .clock-label { font-size: 0.63rem; letter-spacing: 0.28em; text-transform: uppercase; color: #333; }
+    .date-str { font-size: 0.74rem; letter-spacing: 0.06em; }
+    .clock-row { display: flex; align-items: center; gap: 12px; }
 
-    .clock-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
+    .digit-slot { position: relative; width: 43px; height: 61px; }
+
+    .dot {
+      position: absolute;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      will-change: transform, opacity;
     }
 
-    .clock-label {
-      font-size: 0.68rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: #444;
-    }
-
-    .date-str {
-      font-size: 0.78rem;
-      letter-spacing: 0.05em;
-    }
-
-    .clock-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    /* ── Dot Matrix 5×7 ── */
-    .dm {
-      display: grid;
-      grid-template-columns: repeat(5, 7px);
-      grid-template-rows: repeat(7, 7px);
-      gap: 2px;
-      width: 43px;
-      height: 61px;
-    }
-    .dm .d { width: 7px; height: 7px; border-radius: 50%; }
-
-    /* ── Colon (2 stacked dots) ── */
     .colon-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 61px;
-      gap: 16px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 61px; gap: 16px;
     }
     .colon-dot { width: 7px; height: 7px; border-radius: 50%; }
 
-    /* shared blink */
     @keyframes blink {
       0%,49%  { opacity: 1; }
-      50%,100%{ opacity: 0.1; }
+      50%,100% { opacity: 0.12; }
     }
 
-
-    /* ══════════════════════════════════════
-       Clock 1 — Matrix Green  /  Flip
-    ══════════════════════════════════════ */
+    /* ── Clock 1: Matrix Green / Particle Burst ── */
     .c1-panel {
-      background: #050505;
-      border: 1px solid #192a17;
+      background: #040404;
+      border: 1px solid #112010;
       border-radius: 10px;
       padding: 22px 26px 18px;
     }
-
-    .c1-slot { perspective: 400px; width: 43px; height: 61px; }
-    .c1-slot .dm { transform-origin: center center; }
-
-    .c1-slot .dm.flip-out { animation: c1Out 0.18s ease-in  forwards; }
-    .c1-slot .dm.flip-in  { animation: c1In  0.18s ease-out forwards; }
-
-    @keyframes c1Out { from{transform:rotateX(0)}   to{transform:rotateX(-90deg)} }
-    @keyframes c1In  { from{transform:rotateX(90deg)} to{transform:rotateX(0)} }
-
-    .c1-slot .d.on  { background: #3dff20; box-shadow: 0 0 4px #3dff20, 0 0 10px #3dff2055; }
-    .c1-slot .d.off { background: #0a1e08; }
-
+    .c1 .dot.on  { background: #3dff20; box-shadow: 0 0 4px #3dff20, 0 0 10px #3dff2055; }
+    .c1 .dot.off { background: #0a1a08; }
     .c1-colon .colon-dot { background: #3dff20; box-shadow: 0 0 5px #3dff20; }
     .c1-colon { animation: blink 1s step-start infinite; }
-    .c1-date  { color: #276020; }
+    .c1-date  { color: #1a4a15; }
 
-
-    /* ══════════════════════════════════════
-       Clock 2 — Neon Cyan  /  Slide Up
-    ══════════════════════════════════════ */
+    /* ── Clock 2: Neon Cyan / Column Wave ── */
     .c2-panel {
-      background: #030308;
-      border: 1px solid #0a0a1e;
+      background: #020212;
+      border: 1px solid #06061c;
       border-radius: 12px;
       padding: 22px 26px 18px;
     }
+    .c2 .dot.on  { background: #00eeff; box-shadow: 0 0 5px #00eeff, 0 0 14px #00bbff44; }
+    .c2 .dot.off { background: #010d14; }
 
-    .c2-slot { width: 43px; height: 61px; overflow: hidden; position: relative; }
-    .c2-slot .dm { position: absolute; top: 0; left: 0; }
+    @keyframes c2-squish {
+      0%   { transform: scaleY(1); }
+      45%  { transform: scaleY(0.04); }
+      100% { transform: scaleY(1); }
+    }
+    .c2 .dot.wave {
+      animation: c2-squish var(--wdur) ease;
+      animation-delay: var(--wdly);
+    }
 
-    .c2-slot .dm.slide-out { animation: c2Out 0.26s cubic-bezier(.4,0,.6,1) forwards; }
-    .c2-slot .dm.slide-in  { animation: c2In  0.26s cubic-bezier(.4,0,.6,1) forwards; }
-
-    @keyframes c2Out { to  { transform: translateY(-61px); opacity: 0; } }
-    @keyframes c2In  { from{ transform: translateY( 61px); opacity: 0; }
-                       to  { transform: translateY(0);     opacity: 1; } }
-
-    .c2-slot .d.on  { background: #00eeff; box-shadow: 0 0 5px #00eeff, 0 0 14px #00bbff55; }
-    .c2-slot .d.off { background: #00141a; }
-
-    .c2-colon .colon-dot { background: #ff00cc; box-shadow: 0 0 5px #ff00cc, 0 0 12px #cc009955; }
+    .c2-colon .colon-dot { background: #ff44cc; box-shadow: 0 0 5px #ff44cc; }
     .c2-colon { animation: blink 1s step-start infinite; }
-    .c2-date  { color: #007799; }
+    .c2-date  { color: #004455; }
 
-
-    /* ══════════════════════════════════════
-       Clock 3 — Minimal Dark-on-Light  /  Fade
-    ══════════════════════════════════════ */
+    /* ── Clock 3: Warm Minimal / Pixel Rain ── */
     .c3-outer {
-      background: #f0ede6;
+      background: #edeae3;
       border-radius: 16px;
       padding: 28px 32px 22px;
-      box-shadow: 0 6px 36px rgba(0,0,0,0.45);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
     }
-    .c3-label { color: #aaa !important; }
-    .c3-date  { color: #b5b2ab; }
-
-    .c3-slot { width: 43px; height: 61px; position: relative; }
-    .c3-slot .dm { position: absolute; top: 0; left: 0; }
-
-    .c3-slot .dm.fade-out { animation: c3Out 0.18s ease forwards; }
-    .c3-slot .dm.fade-in  { animation: c3In  0.22s ease forwards; }
-
-    @keyframes c3Out { to  { opacity: 0; transform: scale(.82); } }
-    @keyframes c3In  { from{ opacity: 0; transform: scale(.82); }
-                       to  { opacity: 1; transform: scale(1);   } }
-
-    .c3-slot .d.on  { background: #2d2d2d; }
-    .c3-slot .d.off { background: #d5d2cb; }
-
-    .c3-colon .colon-dot { background: #c5c2bb; }
+    .c3 .dot.on  { background: #252018; }
+    .c3 .dot.off { background: #cac7c0; }
+    .c3-colon .colon-dot { background: #bbb8b1; }
     .c3-colon { animation: blink 1s step-start infinite; }
+    .c3-label { color: #aaa !important; }
+    .c3-date  { color: #9e9b94; }
   </style>
 </head>
 <body>
 
   <div class="clock-section">
-    <span class="clock-label">Matrix Clock</span>
+    <span class="clock-label">Particle Burst</span>
     <div class="c1-panel"><div class="clock-row" id="row1"></div></div>
     <span class="date-str c1-date" id="date1"></span>
   </div>
 
   <div class="clock-section">
-    <span class="clock-label">Neon Clock</span>
+    <span class="clock-label">Column Wave</span>
     <div class="c2-panel"><div class="clock-row" id="row2"></div></div>
     <span class="date-str c2-date" id="date2"></span>
   </div>
 
   <div class="clock-section">
-    <span class="clock-label c3-label">Minimal Clock</span>
+    <span class="clock-label c3-label">Pixel Rain</span>
     <div class="c3-outer">
       <div class="clock-row" id="row3"></div>
       <span class="date-str c3-date" id="date3"></span>
@@ -184,7 +118,6 @@
   </div>
 
 <script>
-/* ── 5×7 dot patterns (row-major, 35 bits) ── */
 const PT = {
   '0':[0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
   '1':[0,0,1,0,0, 0,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0],
@@ -198,25 +131,25 @@ const PT = {
   '9':[0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,1, 0,0,0,0,1, 0,0,0,0,1, 0,1,1,1,0],
 };
 
+const STEP = 9;
 const DAYS = ['日','月','火','水','木','金','土'];
-const pad2 = n => String(n).padStart(2, '0');
-const fmtDate = d =>
-  `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;
+const pad2 = n => String(n).padStart(2,'0');
+const fmtDate = d => `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;
 
-function makeDM(char) {
-  const dm = document.createElement('div');
-  dm.className = 'dm';
-  PT[char].forEach(lit => {
-    const d = document.createElement('div');
-    d.className = 'd ' + (lit ? 'on' : 'off');
-    dm.appendChild(d);
-  });
-  return dm;
-}
-
-function applyPT(dm, char) {
-  const p = PT[char], dots = dm.children;
-  for (let i = 0; i < 35; i++) dots[i].className = 'd ' + (p[i] ? 'on' : 'off');
+function createDigit(clockCls) {
+  const slot = document.createElement('div');
+  slot.className = `digit-slot ${clockCls}`;
+  const dots = [];
+  for (let r = 0; r < 7; r++) {
+    for (let c = 0; c < 5; c++) {
+      const el = document.createElement('div');
+      el.className = 'dot off';
+      el.style.cssText = `left:${c*STEP}px;top:${r*STEP}px`;
+      slot.appendChild(el);
+      dots.push({ el, col: c, row: r });
+    }
+  }
+  return { slot, dots, char: null };
 }
 
 function makeColon(cls) {
@@ -230,75 +163,175 @@ function makeColon(cls) {
   return c;
 }
 
-/* ── Generic clock builder ── */
-function buildClock(rowEl, slotClass, colonClass) {
+function buildRow(rowEl, clockCls, colonCls) {
   const slots = {};
   ['h0','h1',null,'m0','m1',null,'s0','s1'].forEach(id => {
-    if (!id) { rowEl.appendChild(makeColon(colonClass)); return; }
-    const slot = document.createElement('div');
-    slot.className = slotClass;
-    const dm = makeDM('0');
-    slot.appendChild(dm);
-    rowEl.appendChild(slot);
-    slots[id] = { slot, dm, prev: '0' };
+    if (!id) { rowEl.appendChild(makeColon(colonCls)); return; }
+    const d = createDigit(clockCls);
+    rowEl.appendChild(d.slot);
+    slots[id] = d;
   });
   return slots;
 }
 
-/* ── Animation drivers ── */
-function animUpdate(entry, char, outClass, inClass) {
-  if (entry.prev === char) return;
-  entry.prev = char;
-  const { dm } = entry;
-  dm.classList.add(outClass);
-  dm.addEventListener('animationend', () => {
-    dm.classList.remove(outClass);
-    applyPT(dm, char);
-    dm.classList.add(inClass);
-    dm.addEventListener('animationend', () => dm.classList.remove(inClass), { once: true });
-  }, { once: true });
+function initDigit(digit, char) {
+  const p = PT[char];
+  digit.dots.forEach((dot, i) => {
+    dot.el.className = 'dot ' + (p[i] ? 'on' : 'off');
+    dot.el.style.transition = '';
+    dot.el.style.transform  = '';
+    dot.el.style.opacity    = '';
+  });
+  digit.char = char;
 }
 
-function tick(slots, dateEl, outCls, inCls) {
-  const now = new Date();
-  const h = pad2(now.getHours()), m = pad2(now.getMinutes()), s = pad2(now.getSeconds());
-  animUpdate(slots.h0, h[0], outCls, inCls);
-  animUpdate(slots.h1, h[1], outCls, inCls);
-  animUpdate(slots.m0, m[0], outCls, inCls);
-  animUpdate(slots.m1, m[1], outCls, inCls);
-  animUpdate(slots.s0, s[0], outCls, inCls);
-  animUpdate(slots.s1, s[1], outCls, inCls);
-  dateEl.textContent = fmtDate(now);
+/* ── Clock 1: Particle Burst ── */
+function update1(digit, newChar) {
+  if (digit.char === newChar) return;
+  const oldP = PT[digit.char];
+  const newP = PT[newChar];
+  digit.char = newChar;
+
+  digit.dots.forEach((dot, i) => {
+    const wasOn  = oldP[i] === 1;
+    const willOn = newP[i] === 1;
+    if (wasOn === willOn) return;
+
+    const delay = Math.floor(Math.random() * 120);
+    const angle = Math.random() * Math.PI * 2;
+    const dist  = 20 + Math.random() * 28;
+    const dx    = +(Math.cos(angle) * dist).toFixed(1);
+    const dy    = +(Math.sin(angle) * dist).toFixed(1);
+    const dur   = 300 + Math.floor(Math.random() * 80);
+
+    if (wasOn) {
+      dot.el.style.transition = `transform ${dur}ms ease-in ${delay}ms,opacity 260ms ease-in ${delay}ms`;
+      dot.el.style.transform  = `translate(${dx}px,${dy}px) scale(0.1)`;
+      dot.el.style.opacity    = '0';
+      setTimeout(() => {
+        dot.el.style.transition = 'none';
+        dot.el.style.transform  = '';
+        dot.el.style.opacity    = '';
+        dot.el.className        = 'dot off';
+        requestAnimationFrame(() => { dot.el.style.transition = ''; });
+      }, delay + dur + 20);
+    } else {
+      dot.el.className        = 'dot on';
+      dot.el.style.transition = 'none';
+      dot.el.style.transform  = `translate(${dx}px,${dy}px) scale(0.1)`;
+      dot.el.style.opacity    = '0';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        dot.el.style.transition = `transform ${dur}ms cubic-bezier(.34,1.56,.64,1) ${delay}ms,opacity 260ms ease-out ${delay}ms`;
+        dot.el.style.transform  = '';
+        dot.el.style.opacity    = '';
+        setTimeout(() => { dot.el.style.transition = ''; }, delay + dur + 20);
+      }));
+    }
+  });
 }
 
-/* ── Build all 3 clocks ── */
-const s1 = buildClock(document.getElementById('row1'), 'c1-slot', 'c1-colon');
-const s2 = buildClock(document.getElementById('row2'), 'c2-slot', 'c2-colon');
-const s3 = buildClock(document.getElementById('row3'), 'c3-slot', 'c3-colon');
+/* ── Clock 2: Column Wave ── */
+function update2(digit, newChar) {
+  if (digit.char === newChar) return;
+  const newP = PT[newChar];
+  digit.char = newChar;
+
+  const dur = 260;
+
+  digit.dots.forEach(dot => dot.el.classList.remove('wave'));
+  void digit.slot.offsetHeight; // single reflow to restart animation
+
+  digit.dots.forEach((dot, i) => {
+    const willOn = newP[i] === 1;
+    const wdly   = dot.col * 40;
+
+    dot.el.style.setProperty('--wdur', dur + 'ms');
+    dot.el.style.setProperty('--wdly', wdly + 'ms');
+    dot.el.classList.add('wave');
+
+    setTimeout(() => {
+      dot.el.classList.toggle('on',  willOn);
+      dot.el.classList.toggle('off', !willOn);
+    }, wdly + dur * 0.45);
+
+    dot.el.addEventListener('animationend', () => dot.el.classList.remove('wave'), { once: true });
+  });
+}
+
+/* ── Clock 3: Pixel Rain ── */
+function update3(digit, newChar) {
+  if (digit.char === newChar) return;
+  const oldP = PT[digit.char];
+  const newP = PT[newChar];
+  digit.char = newChar;
+
+  digit.dots.forEach((dot, i) => {
+    const wasOn  = oldP[i] === 1;
+    const willOn = newP[i] === 1;
+    if (wasOn === willOn) return;
+
+    const delay = dot.col * 38 + Math.floor(Math.random() * 16);
+    const dist  = +(26 + Math.random() * 16).toFixed(1);
+    const dur   = 260 + Math.floor(Math.random() * 40);
+
+    if (wasOn) {
+      dot.el.style.transition = `transform ${dur}ms ease-in ${delay}ms,opacity ${dur}ms ease-in ${delay}ms`;
+      dot.el.style.transform  = `translateY(${dist}px) scale(0.4)`;
+      dot.el.style.opacity    = '0';
+      setTimeout(() => {
+        dot.el.style.transition = 'none';
+        dot.el.style.transform  = '';
+        dot.el.style.opacity    = '';
+        dot.el.className        = 'dot off';
+        requestAnimationFrame(() => { dot.el.style.transition = ''; });
+      }, delay + dur + 20);
+    } else {
+      dot.el.className        = 'dot on';
+      dot.el.style.transition = 'none';
+      dot.el.style.transform  = `translateY(${-dist}px) scale(0.4)`;
+      dot.el.style.opacity    = '0';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        dot.el.style.transition = `transform ${dur}ms cubic-bezier(.22,.61,.36,1) ${delay}ms,opacity ${dur}ms ease-out ${delay}ms`;
+        dot.el.style.transform  = '';
+        dot.el.style.opacity    = '';
+        setTimeout(() => { dot.el.style.transition = ''; }, delay + dur + 20);
+      }));
+    }
+  });
+}
+
+/* ── Build ── */
+const s1 = buildRow(document.getElementById('row1'), 'c1', 'c1-colon');
+const s2 = buildRow(document.getElementById('row2'), 'c2', 'c2-colon');
+const s3 = buildRow(document.getElementById('row3'), 'c3', 'c3-colon');
 const d1 = document.getElementById('date1');
 const d2 = document.getElementById('date2');
 const d3 = document.getElementById('date3');
 
-/* ── Init: set current time without animation ── */
-(function initTime() {
+(function init() {
   const now = new Date();
   const h = pad2(now.getHours()), m = pad2(now.getMinutes()), s = pad2(now.getSeconds());
   const chars = { h0:h[0], h1:h[1], m0:m[0], m1:m[1], s0:s[0], s1:s[1] };
-  [s1, s2, s3].forEach(slots => {
-    Object.entries(slots).forEach(([id, entry]) => {
-      applyPT(entry.dm, chars[id]);
-      entry.prev = chars[id];
-    });
-  });
+  [s1, s2, s3].forEach(slots =>
+    Object.entries(slots).forEach(([id, digit]) => initDigit(digit, chars[id]))
+  );
   [d1, d2, d3].forEach(el => el.textContent = fmtDate(now));
 })();
 
+function tick(slots, dateEl, fn) {
+  const now = new Date();
+  const h = pad2(now.getHours()), m = pad2(now.getMinutes()), s = pad2(now.getSeconds());
+  fn(slots.h0, h[0]); fn(slots.h1, h[1]);
+  fn(slots.m0, m[0]); fn(slots.m1, m[1]);
+  fn(slots.s0, s[0]); fn(slots.s1, s[1]);
+  dateEl.textContent = fmtDate(now);
+}
+
 setInterval(() => {
-  tick(s1, d1, 'flip-out',  'flip-in');
-  tick(s2, d2, 'slide-out', 'slide-in');
-  tick(s3, d3, 'fade-out',  'fade-in');
+  tick(s1, d1, update1);
+  tick(s2, d2, update2);
+  tick(s3, d3, update3);
 }, 1000);
 </script>
-
 </body>
 </html>
