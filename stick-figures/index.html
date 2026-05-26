@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>棒人間アニメーション</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: sans-serif;
+      color: #eee;
+    }
+    h1 { margin-bottom: 32px; font-size: 1.5rem; letter-spacing: 0.1em; }
+    .stage {
+      background: #16213e;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      gap: 48px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .figure-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .figure-box canvas {
+      border-radius: 8px;
+      background: #0f3460;
+    }
+    .label {
+      font-size: 0.85rem;
+      color: #a8b2d8;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+  <h1>棒人間アニメーション</h1>
+  <div class="stage">
+    <div class="figure-box">
+      <canvas id="c1" width="160" height="220"></canvas>
+      <span class="label">ランニング</span>
+    </div>
+    <div class="figure-box">
+      <canvas id="c2" width="160" height="220"></canvas>
+      <span class="label">ジャンプ</span>
+    </div>
+    <div class="figure-box">
+      <canvas id="c3" width="160" height="220"></canvas>
+      <span class="label">ダンス</span>
+    </div>
+  </div>
+
+  <script>
+    // ---- shared drawing helpers ----
+    function drawStick(ctx, joints, color = '#e0e0ff') {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const { head, neck, shoulder, hip, elbowL, elbowR, wristL, wristR, kneeL, kneeR, ankleL, ankleR } = joints;
+
+      // head
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 14, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const lines = [
+        [neck, shoulder],      // neck to shoulder
+        [shoulder, hip],       // torso
+        [shoulder, elbowL], [elbowL, wristL],  // left arm
+        [shoulder, elbowR], [elbowR, wristR],  // right arm
+        [hip, kneeL], [kneeL, ankleL],         // left leg
+        [hip, kneeR], [kneeR, ankleR],         // right leg
+      ];
+
+      lines.forEach(([a, b]) => {
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      });
+    }
+
+    function clearCanvas(ctx, canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ---- Figure 1: Running ----
+    (function() {
+      const canvas = document.getElementById('c1');
+      const ctx = canvas.getContext('2d');
+      let t = 0;
+
+      function frame() {
+        clearCanvas(ctx, canvas);
+        const cx = 80, groundY = 195;
+        const s = Math.sin(t);
+        const s2 = Math.sin(t * 2);
+
+        const headY = groundY - 140 + Math.abs(s) * 6;
+        const head = { x: cx, y: headY };
+        const neck = { x: cx, y: headY + 14 };
+        const shoulder = { x: cx, y: headY + 34 };
+        const hip = { x: cx, y: headY + 80 };
+
+        const elbowL = { x: cx - 22, y: headY + 50 + s * 18 };
+        const wristL = { x: cx - 30, y: headY + 70 + s * 22 };
+        const elbowR = { x: cx + 22, y: headY + 50 - s * 18 };
+        const wristR = { x: cx + 30, y: headY + 70 - s * 22 };
+
+        const kneeL = { x: cx - 18, y: headY + 105 + s * 20 };
+        const ankleL = { x: cx - 14 + s * 12, y: groundY };
+        const kneeR = { x: cx + 18, y: headY + 105 - s * 20 };
+        const ankleR = { x: cx + 14 - s * 12, y: groundY };
+
+        drawStick(ctx, { head, neck, shoulder, hip, elbowL, elbowR, wristL, wristR, kneeL, kneeR, ankleL, ankleR }, '#7ec8e3');
+
+        // ground line
+        ctx.strokeStyle = '#2a4a7f';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(10, groundY + 10);
+        ctx.lineTo(150, groundY + 10);
+        ctx.stroke();
+
+        t += 0.12;
+        requestAnimationFrame(frame);
+      }
+      frame();
+    })();
+
+    // ---- Figure 2: Jump ----
+    (function() {
+      const canvas = document.getElementById('c2');
+      const ctx = canvas.getContext('2d');
+      let t = 0;
+
+      function frame() {
+        clearCanvas(ctx, canvas);
+        const cx = 80, groundY = 195;
+
+        // jump arc: parabola
+        const phase = (t % (Math.PI * 2));
+        const airTime = Math.max(0, Math.sin(phase));
+        const liftY = airTime * 60;
+
+        const baseY = groundY - liftY;
+        const headY = baseY - 140;
+        const head = { x: cx, y: headY };
+        const neck = { x: cx, y: headY + 14 };
+        const shoulder = { x: cx, y: headY + 34 };
+        const hip = { x: cx, y: headY + 80 };
+
+        // arms spread when in air
+        const armSpread = airTime * 24;
+        const elbowL = { x: cx - 28 - armSpread, y: headY + 48 };
+        const wristL = { x: cx - 38 - armSpread, y: headY + 34 };
+        const elbowR = { x: cx + 28 + armSpread, y: headY + 48 };
+        const wristR = { x: cx + 38 + armSpread, y: headY + 34 };
+
+        // legs tuck when in air
+        const legTuck = airTime * 20;
+        const kneeL = { x: cx - 20, y: headY + 98 - legTuck };
+        const ankleL = { x: cx - 18, y: baseY };
+        const kneeR = { x: cx + 20, y: headY + 98 - legTuck };
+        const ankleR = { x: cx + 18, y: baseY };
+
+        drawStick(ctx, { head, neck, shoulder, hip, elbowL, elbowR, wristL, wristR, kneeL, kneeR, ankleL, ankleR }, '#f4a460');
+
+        ctx.strokeStyle = '#2a4a7f';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(10, groundY + 10);
+        ctx.lineTo(150, groundY + 10);
+        ctx.stroke();
+
+        t += 0.07;
+        requestAnimationFrame(frame);
+      }
+      frame();
+    })();
+
+    // ---- Figure 3: Dance ----
+    (function() {
+      const canvas = document.getElementById('c3');
+      const ctx = canvas.getContext('2d');
+      let t = 0;
+
+      function frame() {
+        clearCanvas(ctx, canvas);
+        const cx = 80, groundY = 195;
+        const s = Math.sin(t);
+        const c = Math.cos(t);
+        const s2 = Math.sin(t * 2);
+
+        // torso sway
+        const swayX = s * 10;
+        const headY = groundY - 142 + Math.abs(s2) * 4;
+        const head = { x: cx + swayX, y: headY };
+        const neck = { x: cx + swayX, y: headY + 14 };
+        const shoulder = { x: cx + swayX * 0.6, y: headY + 34 };
+        const hip = { x: cx + swayX * 0.3, y: headY + 80 };
+
+        // arms wave wildly
+        const elbowL = { x: cx - 30 + c * 20, y: headY + 44 + s * 16 };
+        const wristL = { x: cx - 44 + c * 30, y: headY + 24 + s * 28 };
+        const elbowR = { x: cx + 30 - c * 20, y: headY + 44 - s * 16 };
+        const wristR = { x: cx + 44 - c * 30, y: headY + 24 - s * 28 };
+
+        // legs step side to side
+        const stepL = s * 14;
+        const stepR = -s * 14;
+        const kneeL = { x: cx - 18 + stepL, y: headY + 104 };
+        const ankleL = { x: cx - 18 + stepL * 1.4, y: groundY };
+        const kneeR = { x: cx + 18 + stepR, y: headY + 104 };
+        const ankleR = { x: cx + 18 + stepR * 1.4, y: groundY };
+
+        drawStick(ctx, { head, neck, shoulder, hip, elbowL, elbowR, wristL, wristR, kneeL, kneeR, ankleL, ankleR }, '#a8ff78');
+
+        ctx.strokeStyle = '#2a4a7f';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(10, groundY + 10);
+        ctx.lineTo(150, groundY + 10);
+        ctx.stroke();
+
+        t += 0.1;
+        requestAnimationFrame(frame);
+      }
+      frame();
+    })();
+  </script>
+</body>
+</html>

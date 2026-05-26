@@ -12,7 +12,8 @@
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/action-game)",
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/tower-defense)",
       "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/sliding-puzzle)",
-      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/popup-manager)"
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/popup-manager)",
+      "Bash(mkdir -p /Users/ist/Projects/regepan.github.io/stick-figures)"
     ],
     "additionalDirectories": [
       "/Users/ist/Projects/regepan.github.io",
