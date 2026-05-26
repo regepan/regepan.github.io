@@ -81,7 +81,7 @@
       min-height: 1.4em;
       text-align: center;
     }
-    #start-btn {
+    #start-btn, #speed-btn {
       padding: 8px 20px;
       min-height: 40px;
       border: 2px solid #4af;
@@ -94,8 +94,13 @@
       transition: all 0.15s;
       white-space: nowrap;
     }
-    #start-btn:hover { background: #2a5a8a; }
+    #start-btn:hover, #speed-btn:hover { background: #2a5a8a; }
     #start-btn:disabled { opacity: 0.4; cursor: default; }
+    #speed-btn.active {
+      border-color: #fa4;
+      color: #fa4;
+      background: #5a3a1a;
+    }
   </style>
 </head>
 <body>
@@ -105,6 +110,7 @@
   <div class="stat">Lives: <span id="lives">20</span></div>
   <div class="stat">Gold: <span id="gold">150</span></div>
   <div class="stat">Score: <span id="score">0</span></div>
+  <button id="speed-btn">Speed x1</button>
   <button id="start-btn">Start Wave</button>
 </div>
 <canvas id="canvas"></canvas>
@@ -163,6 +169,7 @@ const TOWER_DEFS = {
 let state = {
   gold: 150, lives: 20, score: 0,
   wave: 1, waveActive: false,
+  gameSpeed: 1,
   towers: [], enemies: [], bullets: [], effects: [],
   selectedType: 'basic',
   spawnQueue: [], spawnTimer: 0,
@@ -177,7 +184,7 @@ function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function spawnEnemy(type) {
+function spawnEnemy(type, wave) {
   const types = {
     basic:  { hp: 60,  spd: 1.2, color: '#f88', reward: 10, size: 10 },
     fast:   { hp: 30,  spd: 2.8, color: '#ff8', reward: 15, size: 8  },
@@ -185,10 +192,14 @@ function spawnEnemy(type) {
     boss:   { hp: 1000,spd: 0.5, color: '#f4f', reward: 100,size: 18 },
   };
   const def = types[type] || types.basic;
+  const hpScale = 1 + (wave - 1) * 0.18;
+  const spdScale = 1 + (wave - 1) * 0.03;
   const start = PATH[0];
   return {
     ...def,
-    maxHp: def.hp,
+    hp: Math.round(def.hp * hpScale),
+    maxHp: Math.round(def.hp * hpScale),
+    spd: def.spd * spdScale,
     pathIdx: 0,
     x: start[0] * CELL + CELL / 2,
     y: start[1] * CELL + CELL / 2,
@@ -291,11 +302,17 @@ document.querySelectorAll('.tower-btn').forEach(btn => {
 });
 
 document.getElementById('start-btn').addEventListener('click', startWave);
+document.getElementById('speed-btn').addEventListener('click', () => {
+  state.gameSpeed = state.gameSpeed === 1 ? 2 : 1;
+  const speedBtn = document.getElementById('speed-btn');
+  speedBtn.textContent = `Speed x${state.gameSpeed}`;
+  speedBtn.classList.toggle('active', state.gameSpeed === 2);
+});
 
 // Game loop
 let lastTime = 0;
 function loop(ts) {
-  const dt = Math.min(ts - lastTime, 100);
+  const dt = Math.min(ts - lastTime, 100) * state.gameSpeed;
   lastTime = ts;
   update(dt);
   draw();
@@ -309,7 +326,7 @@ function update(dt) {
   if (state.waveActive && state.spawnQueue.length > 0) {
     state.spawnTimer += dt;
     while (state.spawnQueue.length > 0 && state.spawnTimer >= state.spawnQueue[0].delay) {
-      state.enemies.push(spawnEnemy(state.spawnQueue.shift().type));
+      state.enemies.push(spawnEnemy(state.spawnQueue.shift().type, state.wave));
     }
   }
 
@@ -369,6 +386,7 @@ function update(dt) {
       state.bullets.push({
         x: tower.cx, y: tower.cy,
         tx: target.x, ty: target.y,
+        vx: 0, vy: -1,
         spd: 4, dmg: def.dmg, aoe: def.aoe * CELL,
         color: def.color, r: 5, type: 'bomb',
         slow: def.slow || 0,
@@ -377,6 +395,7 @@ function update(dt) {
       state.bullets.push({
         x: tower.cx, y: tower.cy,
         target: target.id,
+        vx: 0, vy: -1,
         spd: 7, dmg: def.dmg, aoe: 0,
         color: def.color, r: 3, type: 'direct',
         slow: def.slow || 0,
@@ -395,6 +414,8 @@ function update(dt) {
         hitEnemy(en, b.dmg, b.slow);
         return false;
       }
+      b.vx = dx / d;
+      b.vy = dy / d;
       b.x += (dx / d) * b.spd * 2;
       b.y += (dy / d) * b.spd * 2;
       return true;
@@ -410,6 +431,8 @@ function update(dt) {
         });
         return false;
       }
+      b.vx = dx / d;
+      b.vy = dy / d;
       b.x += (dx / d) * b.spd * 2;
       b.y += (dy / d) * b.spd * 2;
       return true;
@@ -549,9 +572,13 @@ function draw() {
   // Bullets
   state.bullets.forEach(b => {
     ctx.fillStyle = b.color;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(Math.atan2(b.vy, b.vx));
     ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.ellipse(0, 0, b.r * 1.7, b.r * 0.75, 0, 0, Math.PI*2);
     ctx.fill();
+    ctx.restore();
   });
 
   // Effects
