@@ -56,22 +56,65 @@ function row(label, value) {
 }
 
 const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-const items = [
-    ['スクリーン解像度',      `${screen.width} × ${screen.height} px`],
-    ['ビューポートサイズ',    `${window.innerWidth} × ${window.innerHeight} px`],
-    ['デバイスピクセル比',    `${window.devicePixelRatio}x`],
-    ['カラー深度',            `${screen.colorDepth} bit`],
-    ['ブラウザ言語',          navigator.language],
-    ['タイムゾーン',          Intl.DateTimeFormat().resolvedOptions().timeZone],
-    ['OS / プラットフォーム', navigator.platform || '不明'],
-    ['CPUコア数',             navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} コア` : '不明'],
-    ['デバイスメモリ',        navigator.deviceMemory ? `${navigator.deviceMemory} GB` : '不明'],
-    ['通信種別',              conn ? (conn.effectiveType || conn.type || '不明') : '不明'],
-    ['Cookie',                navigator.cookieEnabled ? '有効' : '無効'],
-    ['User Agent',            `<span class="break-all">${navigator.userAgent}</span>`],
-];
-document.getElementById('browser-section').innerHTML =
-    items.map(([k, v]) => row(k, v)).join('');
+
+function formatBytes(n){ return n==null? '不明': n; }
+
+function buildItems() {
+    return [
+        ['スクリーン解像度',      `${screen.width} × ${screen.height} px`],
+        ['ビューポートサイズ',    `${window.innerWidth} × ${window.innerHeight} px`],
+        ['デバイスピクセル比',    `${window.devicePixelRatio}x`],
+        ['カラー深度',            `${screen.colorDepth} bit`],
+        ['ブラウザ言語',          navigator.language],
+        ['タイムゾーン',          Intl.DateTimeFormat().resolvedOptions().timeZone],
+        ['OS / プラットフォーム', navigator.platform || '不明'],
+        ['CPUコア数',             navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} コア` : '不明'],
+        ['デバイスメモリ',        navigator.deviceMemory ? `${navigator.deviceMemory} GB` : '不明'],
+        ['通信種別',              conn ? (conn.effectiveType || conn.type || '不明') : '不明'],
+        ['Cookie',                navigator.cookieEnabled ? '有効' : '無効'],
+        ['User Agent',            `<span class="break-all">${navigator.userAgent}</span>`],
+    ];
+}
+
+function measureUrlBar() {
+    const inner = window.innerHeight;
+    const visual = (window.visualViewport && window.visualViewport.height) || inner;
+    const docClient = document.documentElement.clientHeight;
+    const outer = window.outerHeight || window.screen.height || 0;
+
+    // Several heuristic estimates — different browsers expose different metrics.
+    const estOuterMinusInner = Math.max(0, outer - inner);
+    const estInnerMinusVisual = Math.max(0, inner - visual);
+    const estDocClientMinusVisual = Math.max(0, docClient - visual);
+
+    return {
+        inner,
+        visual,
+        docClient,
+        outer,
+        estOuterMinusInner,
+        estInnerMinusVisual,
+        estDocClientMinusVisual
+    };
+}
+
+function prettyUrlBarText(m) {
+    return `outer-inner: ${m.estOuterMinusInner}px, inner-visual: ${m.estInnerMinusVisual}px, docClient-visual: ${m.estDocClientMinusVisual}px`;
+}
+
+function updateInfo(){
+    const items = buildItems();
+    const m = measureUrlBar();
+    items.splice(2, 0, ['URLバー高さ (推定)', prettyUrlBarText(m)]);
+    document.getElementById('browser-section').innerHTML = items.map(([k, v]) => row(k, v)).join('');
+}
+
+updateInfo();
+window.addEventListener('resize', updateInfo);
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateInfo);
+    window.visualViewport.addEventListener('scroll', updateInfo);
+}
 </script>
 </body>
 </html>
