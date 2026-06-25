@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ベトナム語声調記号削除ツール - Vietnamese Tone Remover</title>
+    <meta name="description" content="ベトナム語の声調記号やアクセント記号を削除して、ASCIIのアルファベット表記に変換する無料ツールです。">
+    <meta name="keywords" content="ベトナム語 声調 削除, Vietnamese tone remover, remove Vietnamese accents, tieng Viet khong dau">
+    <meta property="og:title" content="ベトナム語声調記号削除ツール">
+    <meta property="og:description" content="ベトナム語テキストを貼り付けるだけで、声調記号なしのアルファベット表記に変換します。">
+    <meta property="og:type" content="website">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        textarea { resize: vertical; }
+    </style>
+
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-KLDMTKJQ');</script>
+    <!-- End Google Tag Manager -->
+</head>
+<body class="bg-zinc-100 min-h-screen text-zinc-900">
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KLDMTKJQ"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<main class="max-w-5xl mx-auto px-4 py-8 sm:py-12">
+    <header class="mb-7">
+        <p class="text-xs font-semibold tracking-[0.18em] uppercase text-teal-700 mb-2">Vietnamese Text Tool</p>
+        <h1 class="text-3xl sm:text-4xl font-bold text-zinc-900">ベトナム語声調記号削除ツール</h1>
+        <p class="mt-3 text-sm sm:text-base text-zinc-600">ベトナム語の声調記号・アクセント記号を削除して、通常のアルファベット表記に変換します。</p>
+    </header>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white border border-zinc-200 rounded-lg shadow-sm p-4 sm:p-5">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <label for="sourceText" class="text-sm font-semibold text-zinc-700">入力</label>
+                <span id="inputCount" class="text-xs text-zinc-400">0 文字</span>
+            </div>
+            <textarea id="sourceText" rows="15"
+                class="w-full min-h-[280px] border border-zinc-300 rounded-lg px-3 py-3 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                placeholder="例: Xin chào! Tôi đang học tiếng Việt."></textarea>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <button id="sampleBtn" type="button"
+                    class="px-4 py-2 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-50 active:bg-zinc-100 text-sm font-medium text-zinc-700 transition-colors">
+                    サンプル
+                </button>
+                <button id="clearBtn" type="button"
+                    class="px-4 py-2 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-50 active:bg-zinc-100 text-sm font-medium text-zinc-700 transition-colors">
+                    クリア
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white border border-zinc-200 rounded-lg shadow-sm p-4 sm:p-5">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <label for="resultText" class="text-sm font-semibold text-zinc-700">変換結果</label>
+                <span id="outputCount" class="text-xs text-zinc-400">0 文字</span>
+            </div>
+            <textarea id="resultText" rows="15" readonly
+                class="w-full min-h-[280px] border border-zinc-200 rounded-lg px-3 py-3 bg-zinc-50 text-sm leading-6 text-zinc-800 focus:outline-none"
+                placeholder="変換結果がここに表示されます"></textarea>
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+                <button id="copyBtn" type="button"
+                    class="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-zinc-300">
+                    コピー
+                </button>
+                <span id="copyStatus" class="text-xs text-zinc-500" aria-live="polite"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="mt-4 bg-white border border-zinc-200 rounded-lg shadow-sm p-4 sm:p-5">
+        <h2 class="text-sm font-semibold text-zinc-700 mb-3">変換例</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div class="rounded-lg bg-zinc-50 border border-zinc-100 px-3 py-2">
+                <span class="block text-xs text-zinc-400 mb-1">変換前</span>
+                <span class="text-zinc-800">Tiếng Việt rất đẹp.</span>
+            </div>
+            <div class="rounded-lg bg-zinc-50 border border-zinc-100 px-3 py-2">
+                <span class="block text-xs text-zinc-400 mb-1">変換後</span>
+                <span class="text-zinc-800">Tieng Viet rat dep.</span>
+            </div>
+        </div>
+    </section>
+
+    <p class="text-center text-xs text-zinc-500 mt-7">
+        <a href="/" class="hover:underline">← ホームに戻る</a>
+    </p>
+</main>
+
+<script>
+    const sourceText = document.getElementById('sourceText');
+    const resultText = document.getElementById('resultText');
+    const inputCount = document.getElementById('inputCount');
+    const outputCount = document.getElementById('outputCount');
+    const copyBtn = document.getElementById('copyBtn');
+    const copyStatus = document.getElementById('copyStatus');
+
+    const SAMPLE_TEXT = 'Xin chào! Tôi đang học tiếng Việt.\nCộng hòa Xã hội chủ nghĩa Việt Nam\nĐường phố Hà Nội rất đẹp vào buổi sáng.';
+
+    function removeVietnameseMarks(text) {
+        return text
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'D')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function updateCounts(input, output) {
+        inputCount.textContent = `${input.length} 文字`;
+        outputCount.textContent = `${output.length} 文字`;
+    }
+
+    function convertText() {
+        const input = sourceText.value;
+        const output = removeVietnameseMarks(input);
+        resultText.value = output;
+        updateCounts(input, output);
+        copyBtn.disabled = output.length === 0;
+        copyStatus.textContent = '';
+    }
+
+    async function copyResult() {
+        if (!resultText.value) return;
+
+        try {
+            await navigator.clipboard.writeText(resultText.value);
+            copyStatus.textContent = 'コピーしました';
+        } catch (e) {
+            resultText.select();
+            document.execCommand('copy');
+            copyStatus.textContent = 'コピーしました';
+        }
+
+        window.setTimeout(() => {
+            copyStatus.textContent = '';
+        }, 1800);
+    }
+
+    sourceText.addEventListener('input', convertText);
+    copyBtn.addEventListener('click', copyResult);
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        sourceText.value = '';
+        sourceText.focus();
+        convertText();
+    });
+    document.getElementById('sampleBtn').addEventListener('click', () => {
+        sourceText.value = SAMPLE_TEXT;
+        convertText();
+    });
+
+    convertText();
+</script>
+</body>
+</html>
