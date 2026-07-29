@@ -10,8 +10,8 @@
     <!-- End Google Tag Manager -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="ブラウザ上でCSSをすばやく軽量化できる無料のCSS Minifier。入力したコードは外部に送信されません。">
-    <title>CSS Minifier — CSS圧縮ツール</title>
+    <meta name="description" content="ブラウザ上でCSSをすばやく圧縮・整形できる無料ツール。入力したコードは外部に送信されません。">
+    <title>CSS Minifier / Formatter — CSS圧縮・整形ツール</title>
     <style>
         :root {
             --ink: #17201d;
@@ -37,7 +37,7 @@
             font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
-        button, textarea { font: inherit; }
+        button, textarea, select { font: inherit; }
 
         button { -webkit-tap-highlight-color: transparent; }
 
@@ -158,6 +158,29 @@
             height: 16px;
             margin: 0;
             accent-color: var(--accent);
+        }
+
+        .format-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #53605b;
+            font-size: 13px;
+        }
+
+        .format-option select {
+            min-height: 36px;
+            padding: 0 30px 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: #394640;
+            background: white;
+            cursor: pointer;
+        }
+
+        .format-option select:focus {
+            outline: 2px solid rgba(18, 107, 78, .18);
+            border-color: var(--accent);
         }
 
         .actions {
@@ -308,6 +331,7 @@
             .privacy { display: none; }
             .intro { margin-bottom: 22px; }
             .toolbar { align-items: flex-start; flex-wrap: wrap; }
+            .format-option { margin-left: auto; }
             .actions { width: 100%; margin-left: 0; }
             .actions .btn { flex: 1; }
             .editors { grid-template-columns: 1fr; }
@@ -336,19 +360,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <header class="intro">
         <p class="eyebrow">Developer tool · 01</p>
-        <h1>CSS Minifier</h1>
-        <p class="lead">余分な空白や改行、コメントを取り除いて、CSSをすっきり軽量化します。コードを貼り付けたら「圧縮する」を押すだけです。</p>
+        <h1>CSS Minifier <span aria-hidden="true">/</span> Formatter</h1>
+        <p class="lead">CSSの余分な空白や改行を取り除いて軽量化したり、圧縮されたCSSを読みやすく整形したりできます。</p>
     </header>
 
-    <section class="workspace" aria-label="CSS圧縮ツール">
+    <section class="workspace" aria-label="CSS圧縮・整形ツール">
         <div class="toolbar">
             <label class="option">
                 <input id="preserveComments" type="checkbox" checked>
                 /*! で始まるライセンスコメントを残す
             </label>
+            <label class="format-option" for="formatStyle">
+                整形方法
+                <select id="formatStyle">
+                    <option value="2">標準（2スペース）</option>
+                    <option value="4">4スペース</option>
+                    <option value="tab">タブ</option>
+                </select>
+            </label>
             <div class="actions">
                 <button class="btn" id="sampleBtn" type="button">サンプル</button>
                 <button class="btn" id="clearBtn" type="button">クリア</button>
+                <button class="btn" id="formatBtn" type="button">整形する</button>
                 <button class="btn btn-primary" id="minifyBtn" type="button">圧縮する</button>
             </div>
         </div>
@@ -364,26 +397,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
             <div class="editor">
                 <div class="editor-head">
-                    <label class="editor-label" for="output">圧縮結果</label>
+                    <label class="editor-label" id="outputLabel" for="output">処理結果</label>
                     <span class="counter" id="outputCount">0 B</span>
                 </div>
-                <textarea id="output" readonly spellcheck="false" placeholder="圧縮したCSSがここに表示されます"></textarea>
+                <textarea id="output" readonly spellcheck="false" placeholder="圧縮・整形したCSSがここに表示されます"></textarea>
             </div>
         </div>
 
         <div class="result-bar">
-            <div class="metric"><strong id="beforeSize">0 B</strong><span>圧縮前</span></div>
-            <div class="metric"><strong id="afterSize">0 B</strong><span>圧縮後</span></div>
-            <span class="saving" id="saving">0% 削減</span>
+            <div class="metric"><strong id="beforeSize">0 B</strong><span>入力</span></div>
+            <div class="metric"><strong id="afterSize">0 B</strong><span>出力</span></div>
+            <span class="saving" id="saving">処理待ち</span>
             <span class="copy-status" id="copyStatus" role="status" aria-live="polite"></span>
             <button class="btn" id="copyBtn" type="button" disabled>結果をコピー</button>
         </div>
     </section>
 
     <div class="notes">
-        <p class="note"><strong>安全な圧縮</strong>文字列や data URL、calc() 内の演算子に必要な空白を保持します。</p>
+        <p class="note"><strong>圧縮と整形</strong>軽量化だけでなく、圧縮済みCSSを3種類のインデントで読みやすくできます。</p>
         <p class="note"><strong>プライベート</strong>すべての処理はこのブラウザ内で完結し、入力したCSSは送信されません。</p>
-        <p class="note"><strong>ショートカット</strong><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Enter</kbd> でもすぐに圧縮できます。</p>
+        <p class="note"><strong>ショートカット</strong><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Enter</kbd> で圧縮、<kbd>Shift</kbd> も押すと整形できます。</p>
     </div>
 </main>
 
@@ -397,6 +430,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     const saving = document.getElementById('saving');
     const copyBtn = document.getElementById('copyBtn');
     const copyStatus = document.getElementById('copyStatus');
+    const outputLabel = document.getElementById('outputLabel');
 
     const SAMPLE = `/* Card component */
 .card {
@@ -429,7 +463,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         return `${(bytes / 1000).toFixed(bytes < 10000 ? 1 : 0)} KB`;
     }
 
-    function protectCss(css, preserveLicense) {
+    function protectCss(css, preserveLicense, preserveAllComments = false) {
         const tokens = [];
         let clean = '';
 
@@ -458,8 +492,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 const end = css.indexOf('*/', i + 2);
                 const stop = end === -1 ? css.length : end + 2;
                 const comment = css.slice(i, stop);
-                if (preserveLicense && comment.startsWith('/*!')) {
-                    clean += `___CSS_TOKEN_${tokens.push(comment) - 1}___`;
+                if (preserveAllComments || (preserveLicense && comment.startsWith('/*!'))) {
+                    const token = `___CSS_TOKEN_${tokens.push(comment) - 1}___`;
+                    clean += preserveAllComments ? `\n${token}\n` : token;
                 } else {
                     clean += ' ';
                 }
@@ -514,6 +549,118 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         return result.replace(/___CSS_TOKEN_(\d+)___/g, (_, index) => tokens[Number(index)]);
     }
 
+    function formatCss(css, style) {
+        if (!css.trim()) return '';
+
+        const indentUnit = style === 'tab' ? '\t' : ' '.repeat(Number(style));
+        const { clean, tokens } = protectCss(css, false, true);
+        const lines = [];
+        let line = '';
+        let level = 0;
+        let parentheses = 0;
+        let pendingSpace = false;
+
+        function flushLine() {
+            const content = line.trim();
+            if (content) lines.push(indentUnit.repeat(level) + content);
+            line = '';
+            pendingSpace = false;
+        }
+
+        function append(char) {
+            if (pendingSpace && line && !line.endsWith(' ')) line += ' ';
+            line += char;
+            pendingSpace = false;
+        }
+
+        for (let i = 0; i < clean.length; i++) {
+            const tokenMatch = clean.slice(i).match(/^___CSS_TOKEN_(\d+)___/);
+            if (tokenMatch) {
+                const tokenIndex = Number(tokenMatch[1]);
+                const placeholder = tokenMatch[0];
+                if (tokens[tokenIndex].startsWith('/*')) {
+                    flushLine();
+                    line = placeholder;
+                    flushLine();
+                } else {
+                    append(placeholder);
+                }
+                i += placeholder.length - 1;
+                continue;
+            }
+
+            const char = clean[i];
+
+            if (/\s/.test(char)) {
+                pendingSpace = line.length > 0;
+                continue;
+            }
+
+            if (char === '(') {
+                if (/^@[a-z-]+$/i.test(line.trim())) line = line.trimEnd() + ' ';
+                append(char);
+                parentheses++;
+                continue;
+            }
+
+            if (char === ')') {
+                line = line.trimEnd();
+                line += char;
+                pendingSpace = false;
+                parentheses = Math.max(0, parentheses - 1);
+                continue;
+            }
+
+            if (parentheses === 0 && char === '{') {
+                line = line.trimEnd();
+                if (line) line += ' ';
+                line += '{';
+                flushLine();
+                level++;
+                continue;
+            }
+
+            if (parentheses === 0 && char === '}') {
+                flushLine();
+                level = Math.max(0, level - 1);
+                line = '}';
+                flushLine();
+                continue;
+            }
+
+            if (parentheses === 0 && char === ';') {
+                line = line.trimEnd() + ';';
+                flushLine();
+                continue;
+            }
+
+            if (
+                parentheses === 0
+                && char === ':'
+                && /^(?:--)?[\w-]+$/.test(line.trim())
+            ) {
+                line = line.trimEnd() + ': ';
+                pendingSpace = false;
+                continue;
+            }
+
+            if (',>~'.includes(char)) {
+                line = line.trimEnd() + char;
+                pendingSpace = char === ',';
+                continue;
+            }
+
+            append(char);
+        }
+
+        flushLine();
+
+        return lines
+            .join('\n')
+            .replace(/___CSS_TOKEN_(\d+)___/g, (_, index) => tokens[Number(index)])
+            .trim();
+    }
+
     function updateInputSize() {
         inputCount.textContent = formatBytes(byteLength(input.value));
         beforeSize.textContent = inputCount.textContent;
@@ -527,6 +674,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         const percent = before ? Math.max(0, (1 - after / before) * 100) : 0;
 
         output.value = result;
+        outputLabel.textContent = '圧縮結果';
         inputCount.textContent = formatBytes(before);
         outputCount.textContent = formatBytes(after);
         beforeSize.textContent = formatBytes(before);
@@ -534,6 +682,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         saving.textContent = `${percent.toFixed(percent >= 10 ? 0 : 1)}% 削減`;
         copyBtn.disabled = result.length === 0;
         copyStatus.textContent = result ? '圧縮しました' : '';
+        window.setTimeout(() => { copyStatus.textContent = ''; }, 1500);
+    }
+
+    function format() {
+        const source = input.value;
+        const result = formatCss(source, document.getElementById('formatStyle').value);
+        const before = byteLength(source);
+        const after = byteLength(result);
+        const difference = after - before;
+
+        output.value = result;
+        outputLabel.textContent = '整形結果';
+        inputCount.textContent = formatBytes(before);
+        outputCount.textContent = formatBytes(after);
+        beforeSize.textContent = formatBytes(before);
+        afterSize.textContent = formatBytes(after);
+        saving.textContent = difference === 0
+            ? 'サイズ変更なし'
+            : `${difference > 0 ? '+' : '−'}${formatBytes(Math.abs(difference))}`;
+        copyBtn.disabled = result.length === 0;
+        copyStatus.textContent = result ? '整形しました' : '';
         window.setTimeout(() => { copyStatus.textContent = ''; }, 1500);
     }
 
@@ -551,6 +720,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     input.addEventListener('input', updateInputSize);
     document.getElementById('minifyBtn').addEventListener('click', minify);
+    document.getElementById('formatBtn').addEventListener('click', format);
     document.getElementById('copyBtn').addEventListener('click', copyResult);
     document.getElementById('sampleBtn').addEventListener('click', () => {
         input.value = SAMPLE;
@@ -562,7 +732,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         output.value = '';
         outputCount.textContent = '0 B';
         afterSize.textContent = '0 B';
-        saving.textContent = '0% 削減';
+        saving.textContent = '処理待ち';
+        outputLabel.textContent = '処理結果';
         copyBtn.disabled = true;
         copyStatus.textContent = '';
         updateInputSize();
@@ -571,7 +742,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.addEventListener('keydown', event => {
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
             event.preventDefault();
-            minify();
+            if (event.shiftKey) format();
+            else minify();
         }
     });
 

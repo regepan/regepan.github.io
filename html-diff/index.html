@@ -10,15 +10,31 @@
     <!-- End Google Tag Manager -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML Diff Tool</title>
+    <title>HTML/text Diff Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
     <style>
         code, .mono { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
-        .line-add    { background: #d1fae5; }
+        .line-add    { background: #ecfdf5; }
         .line-add    td.prefix { color: #059669; }
-        .line-remove { background: #fee2e2; }
+        .line-remove { background: #fff1f2; }
         .line-remove td.prefix { color: #dc2626; }
+        .word-add {
+            background: #6ee7b7;
+            color: #064e3b;
+            border-radius: 0.2rem;
+            font-weight: 700;
+            box-decoration-break: clone;
+            -webkit-box-decoration-break: clone;
+        }
+        .word-remove {
+            background: #fda4af;
+            color: #881337;
+            border-radius: 0.2rem;
+            font-weight: 700;
+            box-decoration-break: clone;
+            -webkit-box-decoration-break: clone;
+        }
         .line-context { background: #fff; }
         .line-context td.prefix { color: #d1d5db; }
         .collapsed-row { background: #f3f4f6; cursor: pointer; }
@@ -35,8 +51,8 @@
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 <div class="w-full mx-auto p-6">
-    <h1 class="text-2xl font-bold text-gray-800 mb-1">HTML Diff Tool</h1>
-    <p class="text-sm text-gray-500 mb-6">URLから取得するか、HTMLを直接貼り付けて差分を比較します</p>
+    <h1 class="text-2xl font-bold text-gray-800 mb-1">HTML/text Diff Tool</h1>
+    <p class="text-sm text-gray-500 mb-6">URLから取得するか、HTML・テキストを直接貼り付けて差分を比較します</p>
 
     <!-- Input panels -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -56,7 +72,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div id="fetchErrorA" class="hidden text-xs text-red-600 mb-2 bg-red-50 border border-red-200 rounded px-2 py-1"></div>
             <textarea id="htmlA" rows="10"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="URLから取得するか、HTMLをここに貼り付けてください"></textarea>
+                placeholder="URLから取得するか、HTML・テキストをここに貼り付けてください"></textarea>
         </div>
 
         <!-- Side B -->
@@ -74,7 +90,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div id="fetchErrorB" class="hidden text-xs text-red-600 mb-2 bg-red-50 border border-red-200 rounded px-2 py-1"></div>
             <textarea id="htmlB" rows="10"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="URLから取得するか、HTMLをここに貼り付けてください"></textarea>
+                placeholder="URLから取得するか、HTML・テキストをここに貼り付けてください"></textarea>
         </div>
     </div>
 
@@ -170,15 +186,86 @@ function esc(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function splitChangeLines(value) {
+    const parts = value.split('\n');
+    if (parts[parts.length - 1] === '') parts.pop();
+    return parts;
+}
+
+function buildWordDiff(before, after) {
+    const parts = Diff.diffWordsWithSpace(before, after);
+    return {
+        beforeHtml: parts
+            .filter(part => !part.added)
+            .map(part => part.removed
+                ? `<span class="word-remove">${esc(part.value)}</span>`
+                : esc(part.value))
+            .join(''),
+        afterHtml: parts
+            .filter(part => !part.removed)
+            .map(part => part.added
+                ? `<span class="word-add">${esc(part.value)}</span>`
+                : esc(part.value))
+            .join('')
+    };
+}
+
 function buildLineObjects(changes) {
     const lines = [];
     let la = 1, lb = 1;
-    for (const ch of changes) {
-        const parts = ch.value.split('\n');
-        if (parts[parts.length - 1] === '') parts.pop();
+    for (let i = 0; i < changes.length; i++) {
+        const ch = changes[i];
+        const parts = splitChangeLines(ch.value);
+
+        if (ch.removed && changes[i + 1]?.added) {
+            const addedParts = splitChangeLines(changes[i + 1].value);
+            const pairs = Array.from(
+                { length: Math.min(parts.length, addedParts.length) },
+                (_, index) => buildWordDiff(parts[index], addedParts[index])
+            );
+
+            parts.forEach((text, index) => {
+                lines.push({
+                    type: 'remove',
+                    text,
+                    html: pairs[index]?.beforeHtml
+                        ?? `<span class="word-remove">${esc(text)}</span>`,
+                    la: la++,
+                    lb: null
+                });
+            });
+            addedParts.forEach((text, index) => {
+                lines.push({
+                    type: 'add',
+                    text,
+                    html: pairs[index]?.afterHtml
+                        ?? `<span class="word-add">${esc(text)}</span>`,
+                    la: null,
+                    lb: lb++
+                });
+            });
+            i++;
+            continue;
+        }
+
         for (const text of parts) {
-            if (ch.added)        lines.push({ type: 'add',     text, la: null, lb: lb++ });
-            else if (ch.removed) lines.push({ type: 'remove',  text, la: la++, lb: null });
+            if (ch.added) {
+                lines.push({
+                    type: 'add',
+                    text,
+                    html: `<span class="word-add">${esc(text)}</span>`,
+                    la: null,
+                    lb: lb++
+                });
+            } else if (ch.removed) {
+                lines.push({
+                    type: 'remove',
+                    text,
+                    html: `<span class="word-remove">${esc(text)}</span>`,
+                    la: la++,
+                    lb: null
+                });
+            }
             else                 lines.push({ type: 'context', text, la: la++, lb: lb++ });
         }
     }
@@ -204,7 +291,7 @@ function lineRow(line) {
         <td class="px-2 py-px text-gray-400 text-right select-none border-r border-gray-100 w-10 mono text-xs">${line.la ?? ''}</td>
         <td class="px-2 py-px text-gray-400 text-right select-none border-r border-gray-100 w-10 mono text-xs">${line.lb ?? ''}</td>
         <td class="px-2 py-px prefix select-none border-r border-gray-100 w-5 text-center mono text-xs font-bold">${pfx}</td>
-        <td class="px-3 py-px whitespace-pre-wrap break-all mono text-xs">${esc(line.text)}</td>
+        <td class="px-3 py-px whitespace-pre-wrap break-all mono text-xs">${line.html ?? esc(line.text)}</td>
     </tr>`;
 }
 
@@ -254,7 +341,7 @@ function compare() {
 
     if (!htmlA.trim() || !htmlB.trim()) {
         const errEl = document.getElementById('compareError');
-        errEl.textContent = 'A・B 両方のHTMLが必要です。URLから取得するか、テキストエリアに貼り付けてください。';
+        errEl.textContent = 'A・B 両方のHTMLまたはテキストが必要です。URLから取得するか、テキストエリアに貼り付けてください。';
         errEl.classList.remove('hidden');
         return;
     }
@@ -272,12 +359,13 @@ function compare() {
 
     const stats = document.getElementById('stats');
     if (added === 0 && removed === 0) {
-        stats.innerHTML = '<span class="text-green-600 font-semibold">&#10003; 差分なし — 2つのHTMLは同一です</span>';
+        stats.innerHTML = '<span class="text-green-600 font-semibold">&#10003; 差分なし — 2つの内容は同一です</span>';
     } else {
         stats.innerHTML = `
             <span class="text-red-600 font-semibold">&#8722; ${removed} 行削除</span>
             <span class="text-green-700 font-semibold">&#43; ${added} 行追加</span>
-            <span class="text-gray-400">${unchanged} 行変更なし</span>`;
+            <span class="text-gray-400">${unchanged} 行変更なし</span>
+            <span class="text-gray-500">濃いハイライト: 単語単位の差分</span>`;
     }
 
     currentLines = buildLineObjects(changes);
