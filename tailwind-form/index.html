@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tailwind Form Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
+<main class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <a href="../" class="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+        <span aria-hidden="true">←</span> トップへ戻る
+    </a>
+
+    <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+        <header class="border-b border-slate-200 px-6 py-6 sm:px-8">
+            <p class="mb-1 text-sm font-semibold text-blue-600">Component playground</p>
+            <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Tailwind Form Demo</h1>
+            <p class="mt-2 text-sm leading-6 text-slate-600">入力、選択、バリデーション、送信、リセットの動作をまとめて確認できます。</p>
+        </header>
+
+        <form id="demo-form" class="space-y-8 px-6 py-8 sm:px-8" novalidate>
+            <fieldset class="space-y-5">
+                <legend class="text-base font-semibold">基本情報</legend>
+
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="name" class="mb-2 block text-sm font-medium">お名前 <span class="text-red-600">*</span></label>
+                        <input id="name" name="name" type="text" required autocomplete="name" placeholder="山田 太郎"
+                               class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-100">
+                        <p id="name-error" class="mt-1.5 hidden text-sm text-red-600">お名前を入力してください。</p>
+                    </div>
+
+                    <div>
+                        <label for="email" class="mb-2 block text-sm font-medium">メールアドレス <span class="text-red-600">*</span></label>
+                        <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"
+                               class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-100">
+                        <p id="email-error" class="mt-1.5 hidden text-sm text-red-600">有効なメールアドレスを入力してください。</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="mb-2 block text-sm font-medium">パスワード</label>
+                    <div class="relative">
+                        <input id="password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="8文字以上"
+                               class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 pr-16 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-100">
+                        <button id="toggle-password" type="button" class="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-slate-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="password" aria-pressed="false">表示</button>
+                    </div>
+                    <p id="password-error" class="mt-1.5 hidden text-sm text-red-600">8文字以上で入力してください。</p>
+                </div>
+
+                <div>
+                    <label for="category" class="mb-2 block text-sm font-medium">お問い合わせ種別</label>
+                    <select id="category" name="category" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                        <option value="question">質問</option>
+                        <option value="request">要望</option>
+                        <option value="bug">不具合報告</option>
+                    </select>
+                </div>
+
+                <div>
+                    <div class="mb-2 flex items-center justify-between gap-4">
+                        <label for="message" class="block text-sm font-medium">メッセージ</label>
+                        <span id="message-count" class="text-xs text-slate-500" aria-live="polite">0 / 200</span>
+                    </div>
+                    <textarea id="message" name="message" rows="4" maxlength="200" placeholder="自由に入力してください"
+                              class="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"></textarea>
+                </div>
+            </fieldset>
+
+            <fieldset class="space-y-5 border-t border-slate-200 pt-8">
+                <legend class="text-base font-semibold">選択項目</legend>
+
+                <div>
+                    <p class="mb-3 text-sm font-medium">希望する返信方法</p>
+                    <div class="flex flex-wrap gap-x-6 gap-y-3">
+                        <label class="flex cursor-pointer items-center gap-2 text-sm">
+                            <input type="radio" name="reply" value="email" checked class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500">
+                            メール
+                        </label>
+                        <label class="flex cursor-pointer items-center gap-2 text-sm">
+                            <input type="radio" name="reply" value="phone" class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500">
+                            電話
+                        </label>
+                        <label class="flex cursor-pointer items-center gap-2 text-sm text-slate-400">
+                            <input type="radio" name="reply" value="chat" disabled class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500">
+                            チャット（準備中）
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="priority" class="mb-2 flex items-center justify-between text-sm font-medium">
+                        優先度
+                        <output id="priority-value" for="priority" class="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold">3</output>
+                    </label>
+                    <input id="priority" name="priority" type="range" min="1" max="5" value="3" class="h-2 w-full cursor-pointer accent-blue-600">
+                    <div class="mt-1 flex justify-between text-xs text-slate-500"><span>低い</span><span>高い</span></div>
+                </div>
+
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="date" class="mb-2 block text-sm font-medium">希望日</label>
+                        <input id="date" name="date" type="date" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                    </div>
+                    <div>
+                        <label for="attachment" class="mb-2 block text-sm font-medium">添付ファイル</label>
+                        <input id="attachment" name="attachment" type="file" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-2.5 file:font-semibold file:text-blue-700 hover:file:bg-blue-100 focus:outline-none">
+                    </div>
+                </div>
+
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl bg-slate-50 p-4">
+                    <input id="newsletter" name="newsletter" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium">更新情報を受け取る</span>
+                        <span class="mt-0.5 block text-xs leading-5 text-slate-500">新機能やメンテナンス情報をメールでお知らせします。</span>
+                    </span>
+                </label>
+
+                <label class="flex cursor-pointer items-start gap-3">
+                    <input id="terms" name="terms" type="checkbox" required class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                    <span class="text-sm">利用規約に同意します <span class="text-red-600">*</span></span>
+                </label>
+                <p id="terms-error" class="-mt-3 hidden text-sm text-red-600">送信するには利用規約への同意が必要です。</p>
+            </fieldset>
+
+            <div id="result" class="hidden rounded-xl border p-4 text-sm" role="status" aria-live="polite"></div>
+
+            <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
+                <button type="reset" class="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200">リセット</button>
+                <button id="submit-button" type="submit" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60">送信テスト</button>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script>
+    const form = document.getElementById('demo-form');
+    const result = document.getElementById('result');
+    const submitButton = document.getElementById('submit-button');
+    const message = document.getElementById('message');
+    const messageCount = document.getElementById('message-count');
+    const priority = document.getElementById('priority');
+    const priorityValue = document.getElementById('priority-value');
+    const password = document.getElementById('password');
+    const togglePassword = document.getElementById('toggle-password');
+    const fields = ['name', 'email', 'password', 'terms'];
+
+    function updateFieldState(id) {
+        const field = document.getElementById(id);
+        const error = document.getElementById(`${id}-error`);
+        const invalid = !field.validity.valid;
+        field.setAttribute('aria-invalid', String(invalid));
+        error.classList.toggle('hidden', !invalid);
+        return !invalid;
+    }
+
+    fields.forEach((id) => {
+        const field = document.getElementById(id);
+        field.addEventListener('blur', () => updateFieldState(id));
+        field.addEventListener('input', () => {
+            if (field.getAttribute('aria-invalid') === 'true') updateFieldState(id);
+        });
+    });
+
+    message.addEventListener('input', () => {
+        messageCount.textContent = `${message.value.length} / 200`;
+    });
+
+    priority.addEventListener('input', () => {
+        priorityValue.value = priority.value;
+    });
+
+    togglePassword.addEventListener('click', () => {
+        const isVisible = password.type === 'text';
+        password.type = isVisible ? 'password' : 'text';
+        togglePassword.textContent = isVisible ? '表示' : '隠す';
+        togglePassword.setAttribute('aria-pressed', String(!isVisible));
+    });
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const valid = fields.map(updateFieldState).every(Boolean);
+
+        if (!valid) {
+            result.className = 'rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800';
+            result.textContent = '入力内容を確認してください。必須項目または入力形式に問題があります。';
+            form.querySelector('[aria-invalid="true"]')?.focus();
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = '送信中…';
+        result.className = 'rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800';
+        result.textContent = '送信処理をテストしています…';
+
+        window.setTimeout(() => {
+            const data = new FormData(form);
+            const name = data.get('name');
+            const categoryLabel = document.querySelector('#category option:checked').textContent;
+            result.className = 'rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800';
+            result.textContent = `${name}さんの「${categoryLabel}」を受け付けました（デモのため実際には送信されません）。`;
+            submitButton.disabled = false;
+            submitButton.textContent = '送信テスト';
+        }, 700);
+    });
+
+    form.addEventListener('reset', () => {
+        window.setTimeout(() => {
+            fields.forEach((id) => {
+                document.getElementById(id).removeAttribute('aria-invalid');
+                document.getElementById(`${id}-error`).classList.add('hidden');
+            });
+            messageCount.textContent = '0 / 200';
+            priorityValue.value = '3';
+            password.type = 'password';
+            togglePassword.textContent = '表示';
+            togglePassword.setAttribute('aria-pressed', 'false');
+            result.className = 'hidden rounded-xl border p-4 text-sm';
+            result.textContent = '';
+        });
+    });
+</script>
+</body>
+</html>
