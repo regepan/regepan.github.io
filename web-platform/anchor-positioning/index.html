@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSS Anchor Positioning入門 — 吹き出しを基準要素へ配置 | Web Platform 新機能ガイド</title>
+  <meta name="description" content="CSS Anchor Positioningのanchor-name、position-anchor、anchor()を使い、吹き出しを基準要素へ配置する方法をデモ付きで解説します。">
+  <meta property="og:title" content="CSS Anchor Positioning入門 — 吹き出しを基準要素へ配置">
+  <meta property="og:description" content="要素同士の位置関係をCSSだけで結ぶ新しいレイアウト方法を紹介します。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://regepan.github.io/web-platform/anchor-positioning/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="CSS Anchor Positioning入門">
+  <meta name="twitter:description" content="要素同士の位置関係をCSSだけで結ぶ新しいレイアウト方法を紹介します。">
+  <link rel="stylesheet" href="../assets/article.css">
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-KLDMTKJQ');</script>
+</head>
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KLDMTKJQ" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>
+  <header class="site-header"><a class="brand" href="../"><span class="brand-mark" aria-hidden="true">W</span>Web Platform Guide</a><a class="home-link" href="../../">すべてのデモへ</a></header>
+  <main>
+    <header class="article-hero">
+      <nav class="breadcrumbs" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../">Web Platform</a> / Anchor Positioning</nav>
+      <p class="eyebrow">CSS · Feature 02</p>
+      <h1>基準要素にぴたりと付く CSS Anchor Positioning</h1>
+      <p class="lead">ツールチップやメニューの座標をJavaScriptで測らず、別の要素の辺や中央をCSSの位置指定に使えます。</p>
+      <div class="article-meta"><span class="baseline">Baseline 2026</span><span class="kind">最新の主要ブラウザに対応</span></div>
+    </header>
+
+    <div class="article-layout">
+      <article class="article-body">
+        <p>CSS Anchor Positioningは、ある要素を<strong>アンカー（基準）</strong>として名前を付け、その座標を別の要素の配置に利用する仕組みです。DOM上で親子関係にない要素も結べるため、重ねて表示するUIの設計がシンプルになります。</p>
+
+        <h2 id="demo">上下左右へ配置する</h2>
+        <p>ボタンで吹き出しの位置を切り替えてください。吹き出しは青い基準ボタンの辺と中央を参照しています。</p>
+        <div class="demo-frame-wrap">
+          <div class="demo-toolbar"><span>Live demo</span><a href="./demo/" target="_blank" rel="noopener">単独ページで開く ↗</a></div>
+          <iframe class="demo-frame" src="./demo/" title="CSS Anchor Positioningで吹き出しを上下左右に配置するデモ" loading="lazy"></iframe>
+        </div>
+
+        <h2 id="minimum">最小コード</h2>
+        <pre><code>.target {
+  anchor-name: --profile-button;
+}
+
+.tooltip {
+  position: fixed;
+  position-anchor: --profile-button;
+  top: anchor(bottom);
+  left: anchor(center);
+  translate: -50% 12px;
+}</code></pre>
+        <p><code>anchor-name</code>で基準要素に名前を付け、配置する要素の<code>position-anchor</code>から参照します。<code>anchor(bottom)</code>はアンカーの下辺、<code>anchor(center)</code>は中央の座標を返します。</p>
+
+        <h2 id="mechanism">配置の考え方</h2>
+        <h3>通常の位置指定と組み合わせる</h3>
+        <p><code>anchor()</code>は<code>top</code>、<code>right</code>、<code>bottom</code>、<code>left</code>などの値として使います。そこへ<code>translate</code>や<code>calc()</code>を加え、吹き出しの中央揃えと余白を調整します。</p>
+        <pre><code>/* アンカーの左側、縦中央に配置 */
+.tooltip {
+  right: anchor(left);
+  top: anchor(center);
+  translate: -12px -50%;
+}</code></pre>
+        <h3>DOMの置き場所に縛られない</h3>
+        <p>従来は対象要素の直後に吹き出しを置き、共通の親を<code>position: relative</code>にすることがよくありました。名前付きアンカーなら、表示要素を別の場所に置きながら位置関係を保てます。</p>
+        <h3>Popoverとの相性</h3>
+        <p>Popover APIが「開閉とトップレイヤー」を、Anchor Positioningが「トリガーとの位置関係」を担当します。組み合わせると、メニューライブラリが担ってきた処理の多くをブラウザ標準で表現できます。</p>
+
+        <h2 id="accessibility">アクセシビリティの注意</h2>
+        <ul>
+          <li>視覚的な位置が変わっても、読み上げ順はDOM順のままです。意味の通る順序でHTMLを書きます。</li>
+          <li>吹き出しだけに重要な情報を隠さず、キーボードやタッチでも同じ情報へ到達できるようにします。</li>
+          <li>ツールチップはポインターを動かすだけで閉じないよう、十分な操作領域を用意します。</li>
+        </ul>
+
+        <h2 id="fallback">未対応ブラウザでは</h2>
+        <p><code>@supports (anchor-name: --target)</code>で対応を判定できます。このデモでは未対応時に吹き出しをステージ内の通常配置へ戻し、位置切り替えを無効化します。</p>
+        <pre><code>.tooltip {
+  /* フォールバックの通常配置 */
+  position: absolute;
+  inset: auto 16px 16px;
+}
+
+@supports (anchor-name: --target) {
+  .tooltip {
+    position: fixed;
+    position-anchor: --target;
+  }
+}</code></pre>
+        <div class="note"><p><strong>実務のヒント：</strong>Baseline Newly availableは「最新の主要ブラウザで利用可能」という意味です。古いOSのWebViewを対象に含める場合は、アクセス解析と実機確認も行いましょう。</p></div>
+
+        <h2 id="sources">公式資料</h2>
+        <ul class="source-list">
+          <li><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_anchor_positioning" target="_blank" rel="noopener">MDN: CSS anchor positioning</a></li>
+          <li><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/anchor" target="_blank" rel="noopener">MDN: anchor() CSS function</a></li>
+        </ul>
+        <nav class="article-nav" aria-label="関連記事"><a href="../popover/">← 前：Popover API</a><a href="../view-transitions/">次：View Transitions →</a></nav>
+      </article>
+      <aside class="toc"><strong>この記事の内容</strong><a href="#demo">ライブデモ</a><a href="#minimum">最小コード</a><a href="#mechanism">仕組み</a><a href="#accessibility">アクセシビリティ</a><a href="#fallback">フォールバック</a><a href="#sources">公式資料</a></aside>
+    </div>
+  </main>
+  <footer class="site-footer">Web Platform 新機能ガイド — Feature 02</footer>
+</body>
+</html>

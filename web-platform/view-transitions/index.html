@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Transition API入門 — DOM更新を滑らかにつなぐ | Web Platform 新機能ガイド</title>
+  <meta name="description" content="document.startViewTransition()を使い、DOM更新前後の表示を滑らかにつなぐ方法をカードレイアウトのデモ付きで解説します。">
+  <meta property="og:title" content="View Transition API入門 — DOM更新を滑らかにつなぐ">
+  <meta property="og:description" content="画面更新をコールバックで包み、ブラウザ標準のトランジションを適用します。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://regepan.github.io/web-platform/view-transitions/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="View Transition API入門">
+  <meta name="twitter:description" content="画面更新をコールバックで包み、ブラウザ標準のトランジションを適用します。">
+  <link rel="stylesheet" href="../assets/article.css">
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-KLDMTKJQ');</script>
+</head>
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KLDMTKJQ" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>
+  <header class="site-header"><a class="brand" href="../"><span class="brand-mark" aria-hidden="true">W</span>Web Platform Guide</a><a class="home-link" href="../../">すべてのデモへ</a></header>
+  <main>
+    <header class="article-hero">
+      <nav class="breadcrumbs" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../">Web Platform</a> / View Transition API</nav>
+      <p class="eyebrow">JavaScript · Feature 03</p>
+      <h1>DOMの変化を滑らかにつなぐ View Transition API</h1>
+      <p class="lead">更新前と更新後の画面をブラウザが捉え、自然な切り替えを生成します。複製したDOMの位置合わせや後片付けは不要です。</p>
+      <div class="article-meta"><span class="baseline">Baseline 2025</span><span class="kind">同一ドキュメント遷移が主要ブラウザに対応</span></div>
+    </header>
+
+    <div class="article-layout">
+      <article class="article-body">
+        <p>View Transition APIは、ある画面状態から次の状態への変化をアニメーションでつなぐ仕組みです。この記事では、1ページ内でDOMを書き換える<strong>同一ドキュメントのView Transition</strong>を扱います。</p>
+
+        <h2 id="demo">レイアウトを切り替える</h2>
+        <p>グリッド表示とリスト表示を切り替えてください。それぞれのカードに同じ<code>view-transition-name</code>を対応付けることで、カードが新しい位置へ移動するように見えます。</p>
+        <div class="demo-frame-wrap">
+          <div class="demo-toolbar"><span>Live demo</span><a href="./demo/" target="_blank" rel="noopener">単独ページで開く ↗</a></div>
+          <iframe class="demo-frame" src="./demo/" title="View Transition APIによるカードレイアウト切り替えデモ" loading="lazy"></iframe>
+        </div>
+
+        <h2 id="minimum">最小コード</h2>
+        <pre><code>function updateView() {
+  document.body.classList.toggle('compact');
+}
+
+if (document.startViewTransition) {
+  document.startViewTransition(updateView);
+} else {
+  updateView();
+}</code></pre>
+        <p>画面を変える処理を<code>document.startViewTransition()</code>へ渡します。ブラウザは更新前の表示を撮影し、コールバックを実行したあと、更新後の表示との間をアニメーションします。</p>
+
+        <h2 id="mechanism">要素ごとの動きを作る</h2>
+        <p>初期状態ではページ全体が1枚の画像として切り替わります。特定の要素を個別に動かしたい場合は、更新前後で共通する一意な<code>view-transition-name</code>を指定します。</p>
+        <pre><code>.card-orbit {
+  view-transition-name: card-orbit;
+}
+
+::view-transition-group(card-orbit) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(.2, .8, .2, 1);
+}</code></pre>
+        <p>ブラウザは同名の古い要素と新しい要素を対応付けます。同じ名前を同時に複数の表示要素へ付けると遷移が作れないため、名前は一意にします。</p>
+
+        <h3>アニメーションが失敗しても更新は残る</h3>
+        <p>View Transitionは視覚効果です。アニメーションが開始できない場合やスキップされた場合でも、DOM更新後の状態は表示されます。アプリの本来の処理をアニメーションへ依存させないことが大切です。</p>
+
+        <h2 id="accessibility">アクセシビリティの注意</h2>
+        <ul>
+          <li><code>prefers-reduced-motion: reduce</code>ではトランジションを省略し、状態だけを即座に更新します。</li>
+          <li>切り替え後もキーボードフォーカスが予測できる位置に残るようにします。</li>
+          <li>アニメーションだけで状態を伝えず、選択中ボタンの<code>aria-pressed</code>やテキストも更新します。</li>
+          <li>大きな移動や点滅を避け、内容の把握を助ける範囲で使います。</li>
+        </ul>
+
+        <h2 id="fallback">未対応ブラウザでは</h2>
+        <p><code>document.startViewTransition</code>の存在を確認し、未対応なら同じ更新関数を直接呼び出します。この設計ならポリフィルがなくても機能は失われず、アニメーションだけが省略されます。</p>
+        <pre><code>const reduceMotion = matchMedia(
+  '(prefers-reduced-motion: reduce)'
+).matches;
+
+if (!document.startViewTransition || reduceMotion) {
+  updateView();
+  return;
+}
+
+document.startViewTransition(updateView);</code></pre>
+        <div class="note"><p><strong>設計のコツ：</strong>最初にアニメーションなしで正しく動く更新処理を作り、その関数をView Transitionで包むと、フォールバックも自然に完成します。</p></div>
+
+        <h2 id="sources">公式資料</h2>
+        <ul class="source-list">
+          <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API" target="_blank" rel="noopener">MDN: View Transition API</a></li>
+          <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition" target="_blank" rel="noopener">MDN: Document.startViewTransition()</a></li>
+        </ul>
+        <nav class="article-nav" aria-label="関連記事"><a href="../anchor-positioning/">← 前：Anchor Positioning</a><a href="../">特集トップへ →</a></nav>
+      </article>
+      <aside class="toc"><strong>この記事の内容</strong><a href="#demo">ライブデモ</a><a href="#minimum">最小コード</a><a href="#mechanism">仕組み</a><a href="#accessibility">アクセシビリティ</a><a href="#fallback">フォールバック</a><a href="#sources">公式資料</a></aside>
+    </div>
+  </main>
+  <footer class="site-footer">Web Platform 新機能ガイド — Feature 03</footer>
+</body>
+</html>

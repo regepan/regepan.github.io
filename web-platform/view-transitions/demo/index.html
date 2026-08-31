@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Transition API デモ</title>
+  <meta name="description" content="View Transition APIでカードのグリッド表示とリスト表示を切り替えるデモ。">
+  <meta name="robots" content="noindex">
+  <meta property="og:title" content="View Transition API レイアウト切り替えデモ">
+  <meta property="og:description" content="カード表示の変化をブラウザ標準のアニメーションでつなぎます。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://regepan.github.io/web-platform/view-transitions/demo/">
+  <link rel="stylesheet" href="../../assets/demo.css">
+  <link rel="stylesheet" href="./style.css">
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-KLDMTKJQ');</script>
+</head>
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KLDMTKJQ" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>
+  <main class="demo-shell">
+    <h1 class="demo-heading">プロジェクトビュー</h1>
+    <p class="demo-intro">表示形式を切り替えると、カードが新しい位置と形へ滑らかに移ります。</p>
+    <p class="support-status" id="support-status" role="status">対応状況を確認しています…</p>
+    <div class="view-toolbar" role="group" aria-label="表示形式">
+      <button type="button" data-layout="grid" aria-pressed="true"><span aria-hidden="true">▦</span> グリッド</button>
+      <button type="button" data-layout="list" aria-pressed="false"><span aria-hidden="true">☷</span> リスト</button>
+    </div>
+    <section class="project-grid" id="project-grid" data-layout="grid" aria-label="プロジェクト一覧">
+      <article class="work-card orbit"><div class="work-visual blue" aria-hidden="true">O</div><div class="work-copy"><h2>Orbit</h2><p>デザインシステム</p><span>12 files</span></div></article>
+      <article class="work-card meadow"><div class="work-visual green" aria-hidden="true">M</div><div class="work-copy"><h2>Meadow</h2><p>ブランドサイト</p><span>8 files</span></div></article>
+      <article class="work-card ember"><div class="work-visual coral" aria-hidden="true">E</div><div class="work-copy"><h2>Ember</h2><p>モバイルアプリ</p><span>24 files</span></div></article>
+    </section>
+    <p class="standalone-note">View Transition API · same-document demo</p>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+.demo-shell { max-width: 760px; margin: 0 auto; }
+.position-controls { margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.position-controls button { min-width: 64px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: white; cursor: pointer; font-weight: 800; }
+.position-controls button[aria-pressed="true"] { color: white; border-color: var(--blue); background: var(--blue); }
+.position-controls button:disabled { cursor: not-allowed; opacity: 0.55; }
+.anchor-stage { min-height: 270px; position: relative; display: grid; place-items: center; overflow: hidden; border: 1px dashed #c4ccda; border-radius: 20px; background: radial-gradient(circle, #dbe1eb 1px, transparent 1px) 0 0 / 18px 18px, white; }
+.anchor-target { anchor-name: --demo-anchor; min-height: 48px; padding: 11px 18px; border: 0; border-radius: 13px; color: white; background: var(--blue); box-shadow: 0 8px 20px rgba(40, 100, 220, 0.25); font-weight: 900; }
+.anchor-bubble { position: absolute; right: 16px; bottom: 16px; padding: 9px 13px; border-radius: 10px; color: white; background: var(--ink); box-shadow: 0 10px 26px rgba(24, 35, 61, 0.25); font: 700 0.78rem ui-monospace, monospace; white-space: nowrap; transition: inset 200ms ease, translate 200ms ease; }
+.anchor-bubble::after { content: ""; position: absolute; width: 9px; height: 9px; background: var(--ink); transform: rotate(45deg); }
+
+@supports (anchor-name: --demo-anchor) {
+  .anchor-bubble { position: fixed; position-anchor: --demo-anchor; inset: auto; }
+  .anchor-bubble.position-top { bottom: anchor(top); left: anchor(center); translate: -50% -12px; }
+  .anchor-bubble.position-top::after { left: 50%; bottom: -4px; translate: -50% 0; }
+  .anchor-bubble.position-right { top: anchor(center); left: anchor(right); translate: 12px -50%; }
+  .anchor-bubble.position-right::after { left: -4px; top: 50%; translate: 0 -50%; }
+  .anchor-bubble.position-bottom { top: anchor(bottom); left: anchor(center); translate: -50% 12px; }
+  .anchor-bubble.position-bottom::after { left: 50%; top: -4px; translate: -50% 0; }
+  .anchor-bubble.position-left { top: anchor(center); right: anchor(left); translate: -12px -50%; }
+  .anchor-bubble.position-left::after { right: -4px; top: 50%; translate: 0 -50%; }
+}
+
+@media (max-width: 520px) { .anchor-stage { min-height: 240px; } }
+@media (prefers-reduced-motion: reduce) { .anchor-bubble { transition: none; } }

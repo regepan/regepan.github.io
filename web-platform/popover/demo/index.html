@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Popover API デモ</title>
+  <meta name="description" content="Popover APIによる宣言的な操作メニューのデモ。">
+  <meta name="robots" content="noindex">
+  <meta property="og:title" content="Popover API 操作メニューデモ">
+  <meta property="og:description" content="HTML属性だけで開閉できるPopover APIを試せます。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://regepan.github.io/web-platform/popover/demo/">
+  <link rel="stylesheet" href="../../assets/demo.css">
+  <link rel="stylesheet" href="./style.css">
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-KLDMTKJQ');</script>
+</head>
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KLDMTKJQ" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>
+  <main class="demo-shell">
+    <h1 class="demo-heading">プロジェクトメニュー</h1>
+    <p class="demo-intro">HTML属性だけで開閉します。外側のクリックとEscキーも試してみてください。</p>
+    <p class="support-status" id="support-status" role="status">対応状況を確認しています…</p>
+    <section class="project-card" aria-label="サンプルプロジェクト">
+      <div class="project-icon" aria-hidden="true">W</div>
+      <div class="project-copy"><strong>Webリニューアル</strong><span>更新：たった今</span></div>
+      <button class="menu-trigger" type="button" popovertarget="action-menu" aria-label="Webリニューアルの操作メニューを開く">•••</button>
+      <div class="action-menu" id="action-menu" popover="auto">
+        <button type="button"><span aria-hidden="true">✎</span>名前を変更</button>
+        <button type="button"><span aria-hidden="true">↗</span>共有する</button>
+        <button type="button"><span aria-hidden="true">⧉</span>複製する</button>
+        <hr>
+        <button class="danger" type="button"><span aria-hidden="true">×</span>削除する</button>
+      </div>
+    </section>
+    <p class="event-log" id="event-log" aria-live="polite">メニューは閉じています</p>
+    <p class="standalone-note">Popover API · Declarative HTML demo</p>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

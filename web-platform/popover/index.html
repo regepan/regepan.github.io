@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Popover API入門 — HTMLだけで開閉できるUI | Web Platform 新機能ガイド</title>
+  <meta name="description" content="HTMLのpopover属性とpopovertargetを使い、メニューやヒントを少ないコードで作る方法をライブデモ付きで解説します。">
+  <meta property="og:title" content="Popover API入門 — HTMLだけで開閉できるUI">
+  <meta property="og:description" content="popover属性、ライトディスミス、Esc操作を動くデモで理解します。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://regepan.github.io/web-platform/popover/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Popover API入門 — HTMLだけで開閉できるUI">
+  <meta name="twitter:description" content="popover属性、ライトディスミス、Esc操作を動くデモで理解します。">
+  <link rel="stylesheet" href="../assets/article.css">
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-KLDMTKJQ');</script>
+  <!-- End Google Tag Manager -->
+</head>
+<body>
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KLDMTKJQ" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>
+  <header class="site-header"><a class="brand" href="../"><span class="brand-mark" aria-hidden="true">W</span>Web Platform Guide</a><a class="home-link" href="../../">すべてのデモへ</a></header>
+  <main>
+    <header class="article-hero">
+      <nav class="breadcrumbs" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../">Web Platform</a> / Popover API</nav>
+      <p class="eyebrow">HTML · Feature 01</p>
+      <h1>HTMLだけで「開く・閉じる」ができる Popover API</h1>
+      <p class="lead">メニューや補足パネルを表示するために書いていた、開閉処理、外側クリック、Escキー、重なり順の管理。その多くをブラウザに任せられます。</p>
+      <div class="article-meta"><span class="baseline">Baseline 2025</span><span class="kind">最新の主要ブラウザに対応</span></div>
+    </header>
+
+    <div class="article-layout">
+      <article class="article-body">
+        <p>Popover APIは、ページのほかの内容より手前に一時的なUIを表示するための仕組みです。要素に<code>popover</code>属性を付け、ボタンの<code>popovertarget</code>から対象のIDを指定するだけで、JavaScriptなしでも開閉できます。</p>
+
+        <h2 id="demo">まずは触ってみる</h2>
+        <p>「操作メニューを開く」を押してください。メニューの外側をクリックするか、Escキーを押すと閉じます。これは<code>popover="auto"</code>が標準で持つライトディスミスです。</p>
+        <div class="demo-frame-wrap">
+          <div class="demo-toolbar"><span>Live demo</span><a href="./demo/" target="_blank" rel="noopener">単独ページで開く ↗</a></div>
+          <iframe class="demo-frame" src="./demo/" title="Popover APIによる操作メニューのデモ" loading="lazy"></iframe>
+        </div>
+
+        <h2 id="minimum">最小コード</h2>
+        <pre><code>&lt;button popovertarget="action-menu"&gt;
+  操作メニューを開く
+&lt;/button&gt;
+
+&lt;div id="action-menu" popover&gt;
+  &lt;button&gt;名前を変更&lt;/button&gt;
+  &lt;button&gt;共有する&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+        <p><code>popover</code>を値なしで書くと<code>popover="auto"</code>と同じ動作になります。ボタンの<code>popovertarget</code>は、開閉したい要素のIDを参照します。</p>
+
+        <h2 id="mechanism">ブラウザが担当してくれること</h2>
+        <h3>トップレイヤーへの表示</h3>
+        <p>開いた要素は通常の<code>z-index</code>の積み重なりから離れた「トップレイヤー」に置かれます。親要素の<code>overflow: hidden</code>で切れてしまう問題も避けやすくなります。</p>
+        <h3>閉じる操作</h3>
+        <p><code>auto</code>のPopoverは、外側のクリック、Escキー、別のauto Popoverを開いたときに閉じます。常に自分で<code>document</code>へイベントを登録する必要はありません。</p>
+        <h3>CSSによる状態の装飾</h3>
+        <p>開いている要素は<code>:popover-open</code>で選択できます。表示時のアニメーションや背景は<code>::backdrop</code>と組み合わせられます。</p>
+        <pre><code>[popover]:popover-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+[popover]::backdrop {
+  background: rgb(17 26 46 / 12%);
+}</code></pre>
+
+        <h2 id="accessibility">アクセシビリティの注意</h2>
+        <ul>
+          <li>トリガーには<code>button</code>を使い、操作できることを明確にします。</li>
+          <li>メニュー、ダイアログ、ツールチップなど、内容に合うHTML要素と役割を選びます。</li>
+          <li>Popoverは矢印キーによるメニュー移動までは提供しません。本格的なメニューでは別途キーボード操作を実装します。</li>
+          <li>読み上げ順を自然にするため、可能ならトリガーの直後にPopover要素を置きます。</li>
+        </ul>
+
+        <h2 id="fallback">未対応ブラウザでは</h2>
+        <p><code>"popover" in HTMLElement.prototype</code>で機能を検出できます。このデモでは未対応の場合にボタンを無効化し、説明を表示します。古い環境まで同じ体験が必要なら、既存のダイアログ実装やライブラリをフォールバックとして用意します。</p>
+        <div class="note"><p><strong>使い分け：</strong>入力を完了するまでほかの操作を止めたい場合は<code>&lt;dialog&gt;</code>、軽い補足や操作一覧にはPopoverが向いています。</p></div>
+
+        <h2 id="sources">公式資料</h2>
+        <ul class="source-list">
+          <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Popover_API" target="_blank" rel="noopener">MDN: Popover API</a></li>
+          <li><a href="https://html.spec.whatwg.org/multipage/popover.html" target="_blank" rel="noopener">HTML Living Standard: The popover attribute</a></li>
+        </ul>
+        <nav class="article-nav" aria-label="関連記事"><a href="../">← 特集トップ</a><a href="../anchor-positioning/">次：Anchor Positioning →</a></nav>
+      </article>
+      <aside class="toc"><strong>この記事の内容</strong><a href="#demo">ライブデモ</a><a href="#minimum">最小コード</a><a href="#mechanism">仕組み</a><a href="#accessibility">アクセシビリティ</a><a href="#fallback">フォールバック</a><a href="#sources">公式資料</a></aside>
+    </div>
+  </main>
+  <footer class="site-footer">Web Platform 新機能ガイド — Feature 01</footer>
+</body>
+</html>
