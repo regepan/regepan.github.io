@@ -24,12 +24,27 @@
       <p class="eyebrow">CSS · Feature 02</p>
       <h1>基準要素にぴたりと付く CSS Anchor Positioning</h1>
       <p class="lead">ツールチップやメニューの座標をJavaScriptで測らず、別の要素の辺や中央をCSSの位置指定に使えます。</p>
-      <div class="article-meta"><span class="baseline">Baseline 2026</span><span class="kind">最新の主要ブラウザに対応</span></div>
+      <div class="article-meta"><span class="baseline">Baseline 2026</span><span class="kind">対応状況：2026年9月1日確認</span></div>
     </header>
 
     <div class="article-layout">
       <article class="article-body">
         <p>CSS Anchor Positioningは、ある要素を<strong>アンカー（基準）</strong>として名前を付け、その座標を別の要素の配置に利用する仕組みです。DOM上で親子関係にない要素も結べるため、重ねて表示するUIの設計がシンプルになります。</p>
+
+        <section class="support-panel" aria-labelledby="browser-support">
+          <div class="support-panel-header"><h2 id="browser-support">対応ブラウザ</h2><span>MDN Browser Compatibility Data</span></div>
+          <div class="support-table-wrap">
+            <table class="support-table">
+              <thead><tr><th>ブラウザ</th><th>デスクトップ</th><th>モバイル</th></tr></thead>
+              <tbody>
+                <tr><td>Chrome / Edge</td><td class="support-yes">125+</td><td class="support-yes">Chrome Android 125+</td></tr>
+                <tr><td>Firefox</td><td class="support-yes">147+</td><td class="support-yes">Firefox Android 147+</td></tr>
+                <tr><td>Safari</td><td class="support-yes">26+</td><td class="support-yes">iOS / iPadOS 26+</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="support-note">この記事のデモで使う<code>anchor-name</code>、名前付き<code>position-anchor</code>、<code>anchor()</code>の対応範囲です。一部の新しい値や変形後の位置計算は、ブラウザごとに対応状況が異なります。</p>
+        </section>
 
         <h2 id="demo">上下左右へ配置する</h2>
         <p>ボタンで吹き出しの位置を切り替えてください。吹き出しは青い基準ボタンの辺と中央を参照しています。</p>

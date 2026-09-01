@@ -26,12 +26,27 @@
       <p class="eyebrow">HTML · Feature 01</p>
       <h1>HTMLだけで「開く・閉じる」ができる Popover API</h1>
       <p class="lead">メニューや補足パネルを表示するために書いていた、開閉処理、外側クリック、Escキー、重なり順の管理。その多くをブラウザに任せられます。</p>
-      <div class="article-meta"><span class="baseline">Baseline 2025</span><span class="kind">最新の主要ブラウザに対応</span></div>
+      <div class="article-meta"><span class="baseline">Baseline 2025</span><span class="kind">対応状況：2026年9月1日確認</span></div>
     </header>
 
     <div class="article-layout">
       <article class="article-body">
         <p>Popover APIは、ページのほかの内容より手前に一時的なUIを表示するための仕組みです。要素に<code>popover</code>属性を付け、ボタンの<code>popovertarget</code>から対象のIDを指定するだけで、JavaScriptなしでも開閉できます。</p>
+
+        <section class="support-panel" aria-labelledby="browser-support">
+          <div class="support-panel-header"><h2 id="browser-support">対応ブラウザ</h2><span>MDN Browser Compatibility Data</span></div>
+          <div class="support-table-wrap">
+            <table class="support-table">
+              <thead><tr><th>ブラウザ</th><th>デスクトップ</th><th>モバイル</th></tr></thead>
+              <tbody>
+                <tr><td>Chrome / Edge</td><td class="support-yes">114+</td><td class="support-yes">Chrome Android 114+</td></tr>
+                <tr><td>Firefox</td><td class="support-yes">125+</td><td class="support-yes">Firefox Android 125+</td></tr>
+                <tr><td>Safari</td><td class="support-yes">17+</td><td class="support-yes">iOS / iPadOS 18.3+</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="support-note">この記事で使う<code>popover="auto"</code>、ライトディスミス、開閉イベントの対応範囲です。iOS / iPadOS 17〜18.2は外側タップで閉じない既知の制限があります。</p>
+        </section>
 
         <h2 id="demo">まずは触ってみる</h2>
         <p>「操作メニューを開く」を押してください。メニューの外側をクリックするか、Escキーを押すと閉じます。これは<code>popover="auto"</code>が標準で持つライトディスミスです。</p>

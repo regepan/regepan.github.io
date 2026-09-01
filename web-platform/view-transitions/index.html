@@ -24,12 +24,27 @@
       <p class="eyebrow">JavaScript · Feature 03</p>
       <h1>DOMの変化を滑らかにつなぐ View Transition API</h1>
       <p class="lead">更新前と更新後の画面をブラウザが捉え、自然な切り替えを生成します。複製したDOMの位置合わせや後片付けは不要です。</p>
-      <div class="article-meta"><span class="baseline">Baseline 2025</span><span class="kind">同一ドキュメント遷移が主要ブラウザに対応</span></div>
+      <div class="article-meta"><span class="baseline">Baseline 2025</span><span class="kind">対応状況：2026年9月1日確認</span></div>
     </header>
 
     <div class="article-layout">
       <article class="article-body">
         <p>View Transition APIは、ある画面状態から次の状態への変化をアニメーションでつなぐ仕組みです。この記事では、1ページ内でDOMを書き換える<strong>同一ドキュメントのView Transition</strong>を扱います。</p>
+
+        <section class="support-panel" aria-labelledby="browser-support">
+          <div class="support-panel-header"><h2 id="browser-support">対応ブラウザ</h2><span>MDN Browser Compatibility Data</span></div>
+          <div class="support-table-wrap">
+            <table class="support-table">
+              <thead><tr><th>ブラウザ</th><th>デスクトップ</th><th>モバイル</th></tr></thead>
+              <tbody>
+                <tr><td>Chrome / Edge</td><td class="support-yes">111+</td><td class="support-yes">Chrome Android 111+</td></tr>
+                <tr><td>Firefox</td><td class="support-yes">144+</td><td class="support-yes">Firefox Android 144+</td></tr>
+                <tr><td>Safari</td><td class="support-yes">18+</td><td class="support-yes">iOS / iPadOS 18+</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="support-note">この記事で扱う同一ドキュメントの<code>document.startViewTransition()</code>の対応範囲です。ページ間のView Transitionは別の機能で、対応バージョンが異なります。</p>
+        </section>
 
         <h2 id="demo">レイアウトを切り替える</h2>
         <p>グリッド表示とリスト表示を切り替えてください。それぞれのカードに同じ<code>view-transition-name</code>を対応付けることで、カードが新しい位置へ移動するように見えます。</p>
